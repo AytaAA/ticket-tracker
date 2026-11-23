@@ -22,3 +22,6 @@ test-results/
 # OS / editor noise
 .DS_Store
 Thumbs.db
+
+# Claude Code worktrees
+.claude/worktrees/
