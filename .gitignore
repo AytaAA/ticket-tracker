@@ -1,0 +1,24 @@
+# Secrets / local config (never commit). .env.example IS committed.
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Node / frontend
+node_modules/
+dist/
+
+# Playwright (test runs and MCP browser sessions)
+playwright-report/
+test-results/
+.playwright-mcp/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
