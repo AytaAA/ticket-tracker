@@ -37,12 +37,13 @@ test("sign up, verify by email, log in and log out", async ({ page, request }) =
   await page.getByLabel("Email").fill(email.toUpperCase());
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Log in" }).click();
-  await expect(page).toHaveURL(/\/board$/);
+  await expect(page).toHaveURL(/\/board(\?team=\d+)?$/);
   await expect(page.getByTestId("user-menu")).toContainText(email);
 
   // §11.2 session survives a refresh
   await page.reload();
-  await expect(page.getByTestId("board-placeholder")).toBeVisible();
+  await expect(page.getByTestId("user-menu")).toContainText(email);
+  await expect(page.getByRole("link", { name: "Board" })).toHaveClass(/active/);
 
   // §3.2 log out via the user menu (§15)
   await page.getByTestId("user-menu").click();
