@@ -33,3 +33,8 @@ def sha256(value: str) -> str:
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def iso(dt: datetime) -> str:
+    """API timestamp format: UTC, ISO-8601 with Z, e.g. 2026-11-23T10:15:00.123Z (PLAN.md §2)."""
+    return dt.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")

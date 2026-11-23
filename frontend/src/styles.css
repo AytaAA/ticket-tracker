@@ -82,3 +82,32 @@ input[aria-invalid="true"] { border-color: var(--error); }
 .user-menu-list button { display: block; width: 100%; text-align: left; font: inherit; padding: 10px 14px; background: none; border: 0; cursor: pointer; }
 .user-menu-list button:hover { background: var(--bg); }
 .app-main { padding: 24px; }
+
+/* Lists & dialogs (wireframes 4, 5) */
+.page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.page-head .muted { margin-bottom: 0; }
+.table-card { padding: 12px; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { background: #ebebeb; text-align: left; font-size: 0.85rem; padding: 12px 16px; }
+.data-table td { padding: 14px 16px; border-top: 1px solid #ddd; vertical-align: middle; }
+.data-table .num { text-align: center; width: 100px; }
+.data-table .name { font-weight: 700; }
+.data-table .actions { text-align: right; white-space: nowrap; width: 1%; }
+.data-table .actions .btn + .btn { margin-left: 8px; }
+.muted-cell { color: var(--muted); font-size: 0.9rem; }
+.table-note { color: var(--muted); font-size: 0.85rem; margin: 8px 4px 0; }
+.empty-state { color: var(--muted); text-align: center; padding: 32px 16px; margin: 0; }
+.btn-small { padding: 6px 14px; font-size: 0.85rem; }
+.btn-link { font: inherit; background: none; border: 0; padding: 0; margin-top: 14px; color: var(--muted); cursor: pointer; text-decoration: underline; }
+.inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.inline-form input { flex: 1; min-width: 180px; padding: 6px 10px; }
+.inline-form .field-error { flex-basis: 100%; font-weight: 400; }
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.25);
+  display: flex; align-items: flex-start; justify-content: center; padding: 120px 16px;
+}
+.modal { width: 100%; max-width: 640px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); }
+.modal h2 { margin-top: 0; }
+.modal label { margin-top: 4px; }
+.modal-row { display: flex; gap: 16px; align-items: center; }
+.modal-row .btn { min-width: 140px; }

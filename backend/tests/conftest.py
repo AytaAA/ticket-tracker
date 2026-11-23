@@ -34,7 +34,7 @@ from app.main import app  # noqa: E402
 @pytest.fixture(autouse=True)
 def clean_db():
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE users RESTART IDENTITY CASCADE"))
+        conn.execute(text("TRUNCATE users, teams RESTART IDENTITY CASCADE"))
     yield
 
 
@@ -55,3 +55,13 @@ def outbox(monkeypatch):
 
     monkeypatch.setattr("app.auth.send_verification_email", fake_send)
     return sent
+
+
+@pytest.fixture
+def auth_client(client, outbox):
+    """A TestClient logged in as a verified user (session cookie kept by the client)."""
+    email, password = "member@example.com", "secret-pw-1"
+    assert client.post("/api/auth/signup", json={"email": email, "password": password}).status_code == 201
+    assert client.post("/api/auth/verify", json={"token": outbox[-1][1]}).status_code == 200
+    assert client.post("/api/auth/login", json={"email": email, "password": password}).status_code == 200
+    return client

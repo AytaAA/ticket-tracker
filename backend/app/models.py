@@ -45,3 +45,17 @@ class Session(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class Team(Base):
+    __tablename__ = "teams"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    # Trimmed, non-empty, unique ignoring case (§4.4; index uq_teams_name_lower in migration 0003)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    modified_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

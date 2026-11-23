@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app import auth
+from app import auth, teams
 from app.db import get_db
 from app.errors import install_error_handlers
 
@@ -15,6 +15,7 @@ app = FastAPI(
 )
 install_error_handlers(app)
 app.include_router(auth.router)
+app.include_router(teams.router)
 
 
 @app.get("/api/health")

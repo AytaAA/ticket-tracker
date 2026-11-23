@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "./auth";
 import AppLayout from "./components/AppLayout";
 import BoardPage from "./pages/BoardPage";
+import TeamsPage from "./pages/TeamsPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import VerifyPage from "./pages/VerifyPage";
@@ -24,6 +25,7 @@ export default function App() {
           }
         >
           <Route path="/board" element={<BoardPage />} />
+          <Route path="/teams" element={<TeamsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/board" replace />} />

@@ -36,6 +36,7 @@ export default function AppLayout() {
         <span className="brand">Ticket Tracker</span>
         <nav>
           <NavLink to="/board">Board</NavLink>
+          <NavLink to="/teams">Teams</NavLink>
         </nav>
         <div className="user-menu" ref={menuRef}>
           <button

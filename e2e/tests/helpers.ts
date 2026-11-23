@@ -1,4 +1,4 @@
-import { APIRequestContext, expect } from "@playwright/test";
+import { APIRequestContext, expect, Page } from "@playwright/test";
 
 export const MAILPIT = process.env.MAILPIT_URL ?? "http://localhost:8025";
 
@@ -24,4 +24,18 @@ export async function verificationLinkFor(request: APIRequestContext, to: string
   const match = /https?:\/\/[^\s]+(\/verify\?token=[^\s]+)/.exec(msg.Text);
   expect(match, "verification link in email body").not.toBeNull();
   return match![1];
+}
+
+export const TEST_PASSWORD = "e2e-password-1";
+
+/** Signs up + verifies a fresh user through the API and Mailpit, then logs the page's browser context in. */
+export async function loginAsNewUser(page: Page, prefix = "user"): Promise<string> {
+  const email = uniqueEmail(prefix);
+  const signup = await page.request.post("/api/auth/signup", { data: { email, password: TEST_PASSWORD } });
+  expect(signup.status()).toBe(201);
+  const link = await verificationLinkFor(page.request, email);
+  const token = new URL(link, "http://x").searchParams.get("token");
+  expect((await page.request.post("/api/auth/verify", { data: { token } })).status()).toBe(200);
+  expect((await page.request.post("/api/auth/login", { data: { email, password: TEST_PASSWORD } })).status()).toBe(200);
+  return email;
 }
