@@ -10,11 +10,12 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { api, errorMessage } from "../api";
 import { formatRelative, formatUtc } from "../format";
-import { STATE_LABELS, TICKET_STATES, TicketState, TicketSummary, TYPE_LABELS } from "../tickets";
+import { STATE_LABELS, TICKET_STATES, TICKET_TYPES, TicketState, TicketSummary, TicketType, TYPE_LABELS } from "../tickets";
+import type { Epic } from "./EpicsPage";
 import type { Team } from "./TeamsPage";
 
 type Notice = { kind: "success" | "error"; text: string };
@@ -30,6 +31,12 @@ export default function BoardPage() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [saving, setSaving] = useState<Set<number>>(new Set());
   const [dragging, setDragging] = useState<TicketSummary | null>(null);
+  // §8.9 filters, applied client-side (PLAN.md D5)
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<TicketType | "">("");
+  const [epicFilter, setEpicFilter] = useState("");
+  const [epics, setEpics] = useState<Epic[]>([]);
+  const deferredSearch = useDeferredValue(search); // typing stays responsive with 100+ tickets (§8.10)
 
   const teamParam = Number(params.get("team"));
   const team = teams?.find((t) => t.id === teamParam) ?? null;
@@ -66,18 +73,43 @@ export default function BoardPage() {
   }, []);
 
   useEffect(() => {
-    if (team) loadTickets(team.id);
+    if (!team) return;
+    loadTickets(team.id);
+    // filters belong to one team's board
+    setSearch("");
+    setTypeFilter("");
+    setEpicFilter("");
+    setEpics([]);
+    api<Epic[]>(`/epics?team_id=${team.id}`).then(setEpics).catch(() => setEpics([]));
   }, [team?.id, loadTickets]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Type AND epic AND case-insensitive title substring (§8.9)
+  const visible = useMemo(() => {
+    const q = deferredSearch.trim().toLowerCase();
+    return (tickets ?? []).filter(
+      (t) =>
+        (!typeFilter || t.type === typeFilter) &&
+        (!epicFilter || String(t.epic_id) === epicFilter) &&
+        (!q || t.title.toLowerCase().includes(q)),
+    );
+  }, [tickets, typeFilter, epicFilter, deferredSearch]);
+  const filtering = Boolean(search.trim() || typeFilter || epicFilter);
+
+  function clearFilters() {
+    setSearch("");
+    setTypeFilter("");
+    setEpicFilter("");
+  }
 
   // §8.2 five columns in workflow order; §8.7 newest modified first within a column
   const columns = useMemo(() => {
     const by: Record<TicketState, TicketSummary[]> = {
       new: [], ready_for_implementation: [], in_progress: [], ready_for_acceptance: [], done: [],
     };
-    for (const t of tickets ?? []) by[t.state].push(t);
+    for (const t of visible) by[t.state].push(t);
     for (const s of TICKET_STATES) by[s].sort((a, b) => b.modified_at.localeCompare(a.modified_at) || b.id - a.id);
     return by;
-  }, [tickets]);
+  }, [visible]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), // a plain click still opens the ticket
@@ -184,6 +216,45 @@ export default function BoardPage() {
 
       {tickets && (
         <>
+          <div className="card filter-bar" role="search">
+            <div>
+              <label htmlFor="f-search">Search</label>
+              <input id="f-search" type="search" placeholder="Search title…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="f-type">Type</label>
+              <select id="f-type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as TicketType | "")}>
+                <option value="">All types</option>
+                {TICKET_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {TYPE_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="f-epic">Epic</label>
+              <select id="f-epic" value={epicFilter} onChange={(e) => setEpicFilter(e.target.value)}>
+                <option value="">All epics</option>
+                {epics.map((ep) => (
+                  <option key={ep.id} value={ep.id}>
+                    {ep.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button type="button" className="btn btn-secondary" onClick={clearFilters} disabled={!filtering}>
+              Clear
+            </button>
+            <span className="filter-count" data-testid="ticket-count" aria-live="polite">
+              {filtering ? `${visible.length} of ${tickets.length} tickets` : `${tickets.length} ${tickets.length === 1 ? "ticket" : "tickets"}`}
+            </span>
+          </div>
+          {filtering && visible.length === 0 && tickets.length > 0 && (
+            <p className="muted" data-testid="board-no-match">
+              No tickets match the filters. <button type="button" className="btn-link inline" onClick={clearFilters}>Clear filters</button>
+            </p>
+          )}
           {tickets.length === 0 && (
             <p className="muted" data-testid="board-empty">
               No tickets in {team?.name} yet. Use “+ New ticket” to create one.

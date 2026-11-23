@@ -175,3 +175,12 @@ textarea { resize: vertical; }
 .comment-meta time { color: var(--muted); white-space: nowrap; }
 .comment-body { margin: 8px 0 0; white-space: pre-wrap; word-break: break-word; }
 .comments .form-actions { margin-top: 12px; }
+
+/* Board filter bar (wireframe 1) */
+.filter-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; padding: 14px 20px; margin-bottom: 16px; }
+.filter-bar > div { min-width: 180px; }
+.filter-bar > div:first-child { flex: 1; max-width: 340px; }
+.filter-bar label { margin-top: 0; }
+.filter-bar input, .filter-bar select { padding: 7px 10px; }
+.filter-count { margin-left: auto; color: var(--muted); align-self: center; }
+.btn-link.inline { margin: 0; }
