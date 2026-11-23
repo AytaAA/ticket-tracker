@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError, errorMessage } from "../api";
+import CommentsPanel from "../components/CommentsPanel";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { formatUtc } from "../format";
 import { STATE_LABELS, Ticket, TICKET_STATES, TICKET_TYPES, TicketState, TicketType, TYPE_LABELS } from "../tickets";
@@ -289,6 +290,7 @@ export default function TicketPage() {
           <FieldError msg={errors.body} />
         </form>
 
+        {ticket && <CommentsPanel ticketId={ticket.id} />}
       </div>
 
       {confirmDelete && ticket && (
