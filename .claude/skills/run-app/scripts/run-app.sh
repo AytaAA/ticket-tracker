@@ -22,7 +22,7 @@ if [ ! -f docker-compose.yml ] && [ ! -f compose.yaml ]; then
   echo "FAIL: no docker-compose.yml yet - the walking skeleton (ROADMAP Phase 4) has not been built."; exit 3
 fi
 if [ ! -f .env ]; then
-  echo "FAIL: .env is missing. Create it with:  cp .env.example .env   (then set SESSION_SECRET)"; exit 4
+  echo "FAIL: .env is missing. Create it with:  cp .env.example .env"; exit 4
 fi
 
 if [ "${1:-}" = "--clean" ]; then
