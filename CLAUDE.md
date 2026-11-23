@@ -34,6 +34,11 @@ wsl -d Ubuntu -- bash -lc "<command>"
 - Tests *(planned)*: `docker compose exec backend pytest` (single test: `pytest tests/test_x.py::test_name`); Playwright in `e2e/`: `npx playwright test` (single: `npx playwright test path/to.spec.ts -g "name"`)
 - Playwright MCP (`.mcp.json`) is available for driving a real browser during QA.
 
+## Project skills and agents
+- `/run-app` (`.claude/skills/run-app/`): rebuild + start the stack via WSL, wait for health, print URLs. `--clean` wipes the DB.
+- `/qa-slice <feature>` (`.claude/skills/qa-slice/`): test cases from project_requirements.md → Playwright run → report in `docs/qa/<feature>/`.
+- `qa-tester` subagent (`.claude/agents/qa-tester.md`): independent, read-only tester with Playwright MCP tools; returns a pass/fail report against project_requirements.md. Use it to check slices built by the main session.
+
 ## Hard rules
 - **No seed data** on startup or in migrations; a fresh DB has schema + migration metadata only (§9.9). Bulk test data (e.g. 100+ tickets) is created through the API from test scripts.
 - Schema changes only via Alembic migrations, applied automatically on backend start (§9.8).
