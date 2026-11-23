@@ -1,4 +1,4 @@
-import { APIRequestContext, expect, Page } from "@playwright/test";
+import { APIRequestContext, expect, Locator, Page } from "@playwright/test";
 
 export const MAILPIT = process.env.MAILPIT_URL ?? "http://localhost:8025";
 
@@ -38,4 +38,15 @@ export async function loginAsNewUser(page: Page, prefix = "user"): Promise<strin
   expect((await page.request.post("/api/auth/verify", { data: { token } })).status()).toBe(200);
   expect((await page.request.post("/api/auth/login", { data: { email, password: TEST_PASSWORD } })).status()).toBe(200);
   return email;
+}
+
+/** Pointer drag in small steps so dnd-kit's PointerSensor (6px activation) picks it up. */
+export async function dragTo(page: Page, card: Locator, column: Locator) {
+  const from = (await card.boundingBox())!;
+  const to = (await column.boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 5 });
+  await page.mouse.move(to.x + to.width / 2, to.y + 80, { steps: 15 });
+  await page.mouse.up();
 }

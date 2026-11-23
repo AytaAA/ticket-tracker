@@ -1,18 +1,7 @@
-import { expect, Locator, Page, test } from "@playwright/test";
-import { loginAsNewUser } from "./helpers";
+import { expect, Page, test } from "@playwright/test";
+import { dragTo, loginAsNewUser } from "./helpers";
 
 const suffix = () => `${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
-
-/** Pointer drag in small steps so dnd-kit's PointerSensor (6px activation) picks it up. */
-export async function dragTo(page: Page, card: Locator, column: Locator) {
-  const from = (await card.boundingBox())!;
-  const to = (await column.boundingBox())!;
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(from.x + from.width / 2 + 10, from.y + from.height / 2 + 10, { steps: 5 });
-  await page.mouse.move(to.x + to.width / 2, to.y + 80, { steps: 15 });
-  await page.mouse.up();
-}
 
 async function setup(page: Page) {
   await loginAsNewUser(page, "board");
