@@ -37,6 +37,7 @@ export default function AppLayout() {
         <nav>
           <NavLink to="/board">Board</NavLink>
           <NavLink to="/teams">Teams</NavLink>
+          <NavLink to="/epics">Epics</NavLink>
         </nav>
         <div className="user-menu" ref={menuRef}>
           <button

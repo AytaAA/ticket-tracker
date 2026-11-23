@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session as DbSession
 from app.auth import current_user
 from app.db import get_db
 from app.errors import ApiError
-from app.models import Team
+from app.models import Epic, Team
 from app.security import iso, utcnow
 
 router = APIRouter(prefix="/api/teams", tags=["teams"], dependencies=[Depends(current_user)])
@@ -33,9 +33,10 @@ class TeamBody(BaseModel):
 
 
 def team_usage(db: DbSession, team_id: int) -> tuple[int, int]:
-    """(ticket_count, epic_count) for a team. Epics (slice 3) and tickets (slice 4) don't exist yet,
-    so both are 0; those slices extend this function, which also drives the §4.5 delete guard."""
-    return 0, 0
+    """(ticket_count, epic_count) for a team; also drives the §4.5 delete guard.
+    Tickets don't exist until slice 4, which adds their count here."""
+    epics = db.scalar(select(func.count()).select_from(Epic).where(Epic.team_id == team_id))
+    return 0, epics
 
 
 def team_out(db: DbSession, team: Team) -> dict:
@@ -118,7 +119,11 @@ def delete_team(team_id: int, db: DbSession = Depends(get_db)):
             "Delete or move them first.",
         )
     db.delete(team)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:  # an epic/ticket was added in the meantime (FK restrict, no cascade)
+        db.rollback()
+        raise ApiError(409, "team_not_empty", "Team is not empty any more. Reload and try again.")
 
 
 def _plural(n: int, word: str) -> str:

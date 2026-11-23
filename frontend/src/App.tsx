@@ -3,6 +3,7 @@ import { AuthProvider, RequireAuth } from "./auth";
 import AppLayout from "./components/AppLayout";
 import BoardPage from "./pages/BoardPage";
 import TeamsPage from "./pages/TeamsPage";
+import EpicsPage from "./pages/EpicsPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import VerifyPage from "./pages/VerifyPage";
@@ -26,6 +27,7 @@ export default function App() {
         >
           <Route path="/board" element={<BoardPage />} />
           <Route path="/teams" element={<TeamsPage />} />
+          <Route path="/epics" element={<EpicsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/board" replace />} />

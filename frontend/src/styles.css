@@ -111,3 +111,17 @@ input[aria-invalid="true"] { border-color: var(--error); }
 .modal label { margin-top: 4px; }
 .modal-row { display: flex; gap: 16px; align-items: center; }
 .modal-row .btn { min-width: 140px; }
+
+/* Epics (wireframe 5): table + side panel */
+.team-select { width: 320px; max-width: 100%; margin-top: 2px; }
+.split { display: flex; gap: 24px; align-items: flex-start; }
+.split-main { flex: 1.7; min-width: 0; }
+.split-side { flex: 1; min-width: 280px; padding: 24px; }
+.split-side h2 { margin-top: 0; }
+.panel-hint { margin: 0; }
+.team-fixed { margin: 0 0 8px; font-size: 0.9rem; }
+.subline { font-weight: 400; color: var(--muted); font-size: 0.85rem; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 420px; }
+.data-table tr.selected td { background: #f3f3f3; }
+.form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+textarea { resize: vertical; }
+@media (max-width: 900px) { .split { flex-direction: column; } .split-side { width: 100%; } }
