@@ -12,6 +12,13 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_starttls: bool = False
     smtp_from: str = "no-reply@ticket-tracker.local"
+    smtp_timeout_seconds: int = 10
+
+    # Auth (§3.6, PLAN.md D2)
+    verification_token_hours: int = 24
+    session_days: int = 7
+    # Set to true when the app is served over HTTPS
+    cookie_secure: bool = False
 
 
 settings = Settings()

@@ -1,37 +1,33 @@
-import { useEffect, useState } from "react";
-
-type Health =
-  | { kind: "loading" }
-  | { kind: "ok"; db: string }
-  | { kind: "error"; message: string };
+import { Navigate, Route, Routes } from "react-router-dom";
+import { AuthProvider, RequireAuth } from "./auth";
+import AppLayout from "./components/AppLayout";
+import BoardPage from "./pages/BoardPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import VerifyPage from "./pages/VerifyPage";
 
 export default function App() {
-  const [health, setHealth] = useState<Health>({ kind: "loading" });
-
-  useEffect(() => {
-    fetch("/api/health")
-      .then(async (r) => {
-        const body = await r.json().catch(() => ({}));
-        if (r.ok) setHealth({ kind: "ok", db: body.db });
-        else setHealth({ kind: "error", message: `HTTP ${r.status} (db: ${body.db ?? "?"})` });
-      })
-      .catch((e: Error) => setHealth({ kind: "error", message: e.message }));
-  }, []);
-
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", padding: 32 }}>
-      <h1>Ticket Tracker</h1>
-      {health.kind === "loading" && <p data-testid="api-status">API: checking…</p>}
-      {health.kind === "ok" && (
-        <p data-testid="api-status">
-          API: ok · DB: {health.db}
-        </p>
-      )}
-      {health.kind === "error" && (
-        <p data-testid="api-status" style={{ color: "crimson" }}>
-          API: error ({health.message})
-        </p>
-      )}
-    </main>
+    <AuthProvider>
+      <Routes>
+        {/* Public (§3.8) */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/verify" element={<VerifyPage />} />
+
+        {/* Everything else needs a session */}
+        <Route
+          element={
+            <RequireAuth>
+              <AppLayout />
+            </RequireAuth>
+          }
+        >
+          <Route path="/board" element={<BoardPage />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/board" replace />} />
+      </Routes>
+    </AuthProvider>
   );
 }

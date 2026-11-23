@@ -3,7 +3,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app import auth
 from app.db import get_db
+from app.errors import install_error_handlers
 
 app = FastAPI(
     title="Ticket Tracker API",
@@ -11,6 +13,8 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
     redoc_url=None,
 )
+install_error_handlers(app)
+app.include_router(auth.router)
 
 
 @app.get("/api/health")
