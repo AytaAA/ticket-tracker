@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app import auth, epics, teams
+from app import auth, epics, teams, tickets
 from app.db import get_db
 from app.errors import install_error_handlers
 
@@ -17,6 +17,7 @@ install_error_handlers(app)
 app.include_router(auth.router)
 app.include_router(teams.router)
 app.include_router(epics.router)
+app.include_router(tickets.router)
 
 
 @app.get("/api/health")

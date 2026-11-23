@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session as DbSession
 from app.auth import current_user
 from app.db import get_db
 from app.errors import ApiError
-from app.models import Epic, Team
+from app.models import Epic, Team, Ticket
 from app.security import iso, utcnow
 
 router = APIRouter(prefix="/api/teams", tags=["teams"], dependencies=[Depends(current_user)])
@@ -33,10 +33,10 @@ class TeamBody(BaseModel):
 
 
 def team_usage(db: DbSession, team_id: int) -> tuple[int, int]:
-    """(ticket_count, epic_count) for a team; also drives the §4.5 delete guard.
-    Tickets don't exist until slice 4, which adds their count here."""
+    """(ticket_count, epic_count) for a team; also drives the §4.5 delete guard."""
+    tickets = db.scalar(select(func.count()).select_from(Ticket).where(Ticket.team_id == team_id))
     epics = db.scalar(select(func.count()).select_from(Epic).where(Epic.team_id == team_id))
-    return 0, epics
+    return tickets, epics
 
 
 def team_out(db: DbSession, team: Team) -> dict:

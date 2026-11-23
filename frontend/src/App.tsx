@@ -4,6 +4,7 @@ import AppLayout from "./components/AppLayout";
 import BoardPage from "./pages/BoardPage";
 import TeamsPage from "./pages/TeamsPage";
 import EpicsPage from "./pages/EpicsPage";
+import TicketPage from "./pages/TicketPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import VerifyPage from "./pages/VerifyPage";
@@ -28,6 +29,8 @@ export default function App() {
           <Route path="/board" element={<BoardPage />} />
           <Route path="/teams" element={<TeamsPage />} />
           <Route path="/epics" element={<EpicsPage />} />
+          <Route path="/tickets/new" element={<TicketPage />} />
+          <Route path="/tickets/:id" element={<TicketPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/board" replace />} />

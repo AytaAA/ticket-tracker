@@ -27,7 +27,9 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(RequestValidationError)
     async def validation_error(_: Request, exc: RequestValidationError):
         first = exc.errors()[0] if exc.errors() else {}
-        loc = [str(p) for p in first.get("loc", ()) if p not in ("body", "query", "path")]
+        loc = [str(p) for p in first.get("loc", ())]
+        if loc and loc[0] in ("body", "query", "path"):  # drop only the location prefix ("body" is also a field name)
+            loc = loc[1:]
         field = ".".join(loc) or None
         msg = first.get("msg", "Invalid request")
         # pydantic prefixes custom ValueError messages with "Value error, "

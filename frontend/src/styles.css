@@ -125,3 +125,19 @@ input[aria-invalid="true"] { border-color: var(--error); }
 .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
 textarea { resize: vertical; }
 @media (max-width: 900px) { .split { flex-direction: column; } .split-side { width: 100%; } }
+
+/* Ticket page (wireframe 3) */
+.back-link { display: inline-block; font-weight: 700; text-decoration: none; margin-bottom: 12px; }
+.ticket-head { align-items: flex-end; }
+.meta-line { color: var(--muted); font-size: 0.9rem; margin: 0 0 6px; background: #ececec; padding: 6px 8px; border-radius: 4px; display: inline-block; }
+.ticket-title { margin: 4px 0 0; word-break: break-word; }
+.head-actions { display: flex; gap: 12px; }
+.head-actions .btn { min-width: 120px; }
+.ticket-form { padding: 24px; }
+.ticket-form label:first-child { margin-top: 0; }
+.form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.form-grid label { margin-top: 0; }
+.alert-info { color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; }
+.btn-danger { background: var(--error); border-color: var(--error); color: #fff; }
+.modal.confirm { max-width: 460px; }
+@media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }

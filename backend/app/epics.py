@@ -2,14 +2,14 @@
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, field_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
 from app.auth import current_user
 from app.db import get_db
 from app.errors import ApiError
-from app.models import Epic, Team
+from app.models import Epic, Team, Ticket
 from app.security import iso, utcnow
 
 router = APIRouter(prefix="/api/epics", tags=["epics"], dependencies=[Depends(current_user)])
@@ -72,9 +72,8 @@ class EpicUpdate(BaseModel):
 
 
 def epic_usage(db: DbSession, epic_id: int) -> int:
-    """Number of tickets referencing the epic; drives the §5.8 delete guard.
-    Tickets don't exist until slice 4, which adds the count here."""
-    return 0
+    """Number of tickets referencing the epic; drives the §5.8 delete guard."""
+    return db.scalar(select(func.count()).select_from(Ticket).where(Ticket.epic_id == epic_id))
 
 
 def epic_out(db: DbSession, epic: Epic) -> dict:
