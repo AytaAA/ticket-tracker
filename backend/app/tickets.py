@@ -205,7 +205,8 @@ def update_ticket(ticket_id: int, body: TicketUpdate, db: DbSession = Depends(ge
     sent = body.model_dump(include=body.model_fields_set)
     for field in ("team_id", "type", "state", "title", "body"):
         if field in sent and sent[field] is None:
-            raise ApiError(422, "validation_error", f"{field} cannot be empty", field)
+            label = {"team_id": "Team", "type": "Type", "state": "State", "title": "Title", "body": "Body"}[field]
+            raise ApiError(422, "validation_error", f"{label} is required", field)
 
     new_team = sent.get("team_id", ticket.team_id)
     new_epic = sent.get("epic_id", ticket.epic_id)

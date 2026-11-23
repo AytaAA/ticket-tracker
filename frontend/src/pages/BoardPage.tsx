@@ -13,12 +13,12 @@ import {
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { api, errorMessage } from "../api";
+import { Notice, takeNotice } from "../notice";
 import { formatRelative, formatUtc } from "../format";
 import { STATE_LABELS, TICKET_STATES, TICKET_TYPES, TicketState, TicketSummary, TicketType, TYPE_LABELS } from "../tickets";
 import type { Epic } from "./EpicsPage";
 import type { Team } from "./TeamsPage";
 
-type Notice = { kind: "success" | "error"; text: string };
 
 // §8 / §10.5 Kanban board for one selected team (wireframe 1). Selected team lives in the URL (PLAN.md D9).
 export default function BoardPage() {
@@ -42,7 +42,7 @@ export default function BoardPage() {
   const team = teams?.find((t) => t.id === teamParam) ?? null;
 
   useEffect(() => {
-    setNotice((location.state as { notice?: Notice } | null)?.notice ?? null);
+    setNotice(takeNotice(location.state));
   }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadTeams = useCallback(async () => {

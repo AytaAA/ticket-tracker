@@ -48,6 +48,10 @@ test("create, view, edit and delete a ticket", async ({ page }) => {
     await expect(page.getByTestId("ticket-notice")).toHaveText(/Ticket #\d+ created\./);
     await expect(page).toHaveURL(/\/tickets\/\d+$/);
     const id = page.url().split("/").pop();
+    // QA BUG-regression-1: the "created" notice must not come back after a refresh
+    await page.reload();
+    await expect(page.getByLabel("Title")).toHaveValue("Payment fails for expired card");
+    await expect(page.getByTestId("ticket-notice")).toHaveCount(0);
     await expect(page.getByTestId("ticket-meta")).toContainText(`#${id} • Created by ${email}`);
     await expect(page.getByTestId("ticket-meta")).toContainText("UTC");
     await expect(page.getByRole("heading", { name: "Payment fails for expired card" })).toBeVisible();

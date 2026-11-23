@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError, errorMessage } from "../api";
+import { Notice, takeNotice } from "../notice";
 import CommentsPanel from "../components/CommentsPanel";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { formatUtc } from "../format";
@@ -9,7 +10,6 @@ import type { Epic } from "./EpicsPage";
 import type { Team } from "./TeamsPage";
 
 type Form = { team_id: string; type: TicketType | ""; state: TicketState; epic_id: string; title: string; body: string };
-type Notice = { kind: "success" | "error" | "info"; text: string };
 
 function formFrom(t: Ticket): Form {
   return {
@@ -70,7 +70,7 @@ export default function TicketPage() {
 
   // A notice handed over by navigate() (e.g. "Ticket #5 created.")
   useEffect(() => {
-    setNotice((location.state as { notice?: Notice } | null)?.notice ?? null);
+    setNotice(takeNotice(location.state));
   }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Epics of the team currently selected in the form (§5.6)
