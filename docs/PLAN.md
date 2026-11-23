@@ -1,6 +1,6 @@
 # Build Plan — Ticket Tracker
 
-> Status: **DRAFT, waiting for product-owner approval** (Phase 3 of `docs/ROADMAP.md`).
+> Status: **APPROVED by product owner, 2026-11-23** (Phase 3 of `docs/ROADMAP.md`). Decisions D1–D9 accepted as proposed.
 > Source of truth: `docs/project_requirements.md`. Every item below cites the § it implements. Anything not traceable to project_requirements.md is
 > out of scope (§12, §14).
 
@@ -187,13 +187,13 @@ JWT/refresh tokens, Redis, a separate admin panel.
 
 ## 6. Review checklist (for you, as test-basis review)
 
-- [ ] §3: every auth rule has a column, an endpoint status code and a test in slice 1
-- [ ] §4.4/§4.5: unique-ignore-case index; 409 on delete; Delete disabled in UI
-- [ ] §5.2/§5.7/§5.8: epic team never updatable; composite FK; 409 on delete
-- [ ] §6.1: all 10 fields present with the exact enum values
-- [ ] §6.5/§7.5: `modified_at` rules have explicit tests
-- [ ] §6.7: comments cascade on ticket delete
-- [ ] §8.2–§8.9: board columns, order, rollback, filters covered by slices 5 and 7
-- [ ] §9.4: 401/404/409/422 used consistently; §9.6 no tokens in URLs except the verify link
-- [ ] §9.8/§9.9: Alembic on start, no seed data
-- [ ] Decisions D1–D9 accepted or changed
+- [x] §3: every auth rule has a column, an endpoint status code and a test in slice 1
+- [x] §4.4/§4.5: unique-ignore-case index; 409 on delete; Delete disabled in UI
+- [x] §5.2/§5.7/§5.8: epic team never updatable; composite FK; 409 on delete
+- [x] §6.1: all 10 fields present with the exact enum values
+- [x] §6.5/§7.5: `modified_at` rules have explicit tests
+- [x] §6.7: comments cascade on ticket delete
+- [x] §8.2–§8.9: board columns, order, rollback, filters covered by slices 5 and 7
+- [x] §9.4: 401/404/409/422 used consistently; §9.6 no tokens in URLs except the verify link
+- [x] §9.8/§9.9: Alembic on start, no seed data
+- [x] Decisions D1–D9 accepted or changed
