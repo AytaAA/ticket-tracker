@@ -118,9 +118,19 @@ def test_unknown_token_is_rejected(client, outbox):
 # ---------- §3.7 resend ----------
 
 
+def age_tokens(seconds=61):
+    """Pretend the last verification email went out `seconds` ago (resend cooldown is 60 s)."""
+    with engine.begin() as conn:
+        conn.execute(
+            text("UPDATE email_verification_tokens SET created_at = created_at - make_interval(secs => :s)"),
+            {"s": seconds},
+        )
+
+
 def test_resend_issues_new_token_and_invalidates_old_one(client, outbox):
     signup(client)
     old = outbox[0][1]
+    age_tokens()
     r = client.post("/api/auth/resend-verification", json={"email": " ALICE@example.com "})
     assert r.status_code == 202
     new = outbox[1][1]
@@ -133,6 +143,7 @@ def test_resend_after_expiry_gives_a_working_token(client, outbox):
     signup(client)
     with engine.begin() as conn:
         conn.execute(text("UPDATE email_verification_tokens SET expires_at = now() - interval '1 second'"))
+    age_tokens(24 * 3600)  # an expired link was sent a day ago
     client.post("/api/auth/resend-verification", json={"email": "alice@example.com"})
     assert client.post("/api/auth/verify", json={"token": outbox[-1][1]}).status_code == 200
 
@@ -264,3 +275,38 @@ def test_whitespace_only_password_is_422(client, outbox, password):
 
 def test_password_with_spaces_inside_is_fine(client, outbox):
     assert signup(client, "spaces@example.com", "  my pass  ").status_code == 201
+
+
+# ---------- security review SEC-1 (product owner 2026-11-24): 60-second resend cooldown ----------
+
+
+def test_resend_within_60_seconds_sends_nothing_and_keeps_the_link(client, outbox):
+    signup(client)
+    first = outbox[0][1]
+    r = client.post("/api/auth/resend-verification", json={"email": "alice@example.com"})
+    assert r.status_code == 202  # same answer as always (D8)
+    assert len(outbox) == 1  # nothing sent
+    for _ in range(5):  # hammering doesn't help
+        client.post("/api/auth/resend-verification", json={"email": "alice@example.com"})
+    assert len(outbox) == 1
+    assert client.post("/api/auth/verify", json={"token": first}).status_code == 200  # first link still valid
+
+
+def test_resend_after_60_seconds_sends_again(client, outbox):
+    signup(client)
+    age_tokens(59)
+    client.post("/api/auth/resend-verification", json={"email": "alice@example.com"})
+    assert len(outbox) == 1
+    age_tokens(2)  # now 61 s ago
+    client.post("/api/auth/resend-verification", json={"email": "alice@example.com"})
+    assert len(outbox) == 2
+    client.post("/api/auth/resend-verification", json={"email": "alice@example.com"})  # cooldown starts again
+    assert len(outbox) == 2
+
+
+def test_cooldown_answer_is_the_same_for_unknown_emails(client, outbox):
+    signup(client)
+    cooling = client.post("/api/auth/resend-verification", json={"email": "alice@example.com"})
+    unknown = client.post("/api/auth/resend-verification", json={"email": "nobody@example.com"})
+    assert cooling.status_code == unknown.status_code == 202
+    assert cooling.json() == unknown.json()

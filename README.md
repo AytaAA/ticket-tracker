@@ -78,7 +78,8 @@ Create everything through the app or the API.
 7. Back on the **Board**, drag the card to another column. The change is saved immediately.
 
 If the verification link expired (after 24 hours) or was replaced, use **Resend email** on the login screen
-or on the error page.
+or on the error page. At most one verification email per address is sent every 60 seconds (counting the one sent
+at sign-up); a click within that minute shows the usual message but sends nothing, and the earlier link keeps working.
 
 ### Bulk test data (100+ tickets)
 
@@ -114,6 +115,9 @@ docker compose up --build -d --wait
 | `SMTP_STARTTLS` | `false` | Use STARTTLS |
 | `SMTP_FROM` | `no-reply@ticket-tracker.local` | Sender address |
 | `COOKIE_SECURE` | `false` | Set to `true` only when the app is served over HTTPS |
+| `VERIFICATION_TOKEN_HOURS` | `24` | How long a verification link is valid (§3.6 requires 24) |
+| `RESEND_COOLDOWN_SECONDS` | `60` | Minimum time between two verification emails to one address |
+| `SESSION_DAYS` | `7` | How long a login lasts |
 
 ### Sending real email through the company relay
 

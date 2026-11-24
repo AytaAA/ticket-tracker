@@ -86,6 +86,7 @@ def issue_verification_token(db: DbSession, user: User) -> str:
         EmailVerificationToken(
             user_id=user.id,
             token_hash=sha256(token),
+            created_at=utcnow(),
             expires_at=utcnow() + timedelta(hours=settings.verification_token_hours),
         )
     )
@@ -149,15 +150,34 @@ def verify(body: VerifyBody, db: DbSession = Depends(get_db)):
     return {"message": "Email verified. You can now log in."}
 
 
+RESEND_MESSAGE = (
+    "If this email is registered and not yet verified, a new verification email has been sent. "
+    "A new email can be requested once a minute."
+)
+
+
+def _sent_recently(db: DbSession, user: User) -> bool:
+    """Security review SEC-1 (product-owner decision 2026-11-24): at most one verification email per address
+    every RESEND_COOLDOWN_SECONDS (default 60), counting the one sent at sign-up. Stops email bombing via the relay."""
+    last = db.scalar(
+        select(EmailVerificationToken.created_at)
+        .where(EmailVerificationToken.user_id == user.id)
+        .order_by(EmailVerificationToken.created_at.desc())
+        .limit(1)
+    )
+    return last is not None and (utcnow() - last).total_seconds() < settings.resend_cooldown_seconds
+
+
 @router.post("/resend-verification", status_code=202)
 def resend_verification(body: EmailBody, db: DbSession = Depends(get_db)):
-    """Always 202 with the same message, so it does not reveal which emails exist (PLAN.md D8)."""
+    """Always 202 with the same message, so it does not reveal which emails exist (PLAN.md D8) —
+    also when nothing is sent because of the cooldown (the earlier link keeps working then)."""
     user = db.scalar(select(User).where(User.email == body.email))
-    if user is not None and not user.is_verified:
+    if user is not None and not user.is_verified and not _sent_recently(db, user):
         token = issue_verification_token(db, user)
         db.commit()
         send_verification_email(user.email, token)
-    return {"message": "If this email is registered and not yet verified, a new verification email has been sent."}
+    return {"message": RESEND_MESSAGE}
 
 
 @router.post("/login")

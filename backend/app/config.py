@@ -16,6 +16,8 @@ class Settings(BaseSettings):
 
     # Auth (§3.6, PLAN.md D2)
     verification_token_hours: int = 24
+    # Minimum seconds between two verification emails to one address (security review SEC-1, 2026-11-24)
+    resend_cooldown_seconds: int = 60
     session_days: int = 7
     # Set to true when the app is served over HTTPS
     cookie_secure: bool = False

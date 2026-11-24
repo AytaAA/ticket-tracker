@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { uniqueEmail, verificationLinkFor } from "./helpers";
+import { MAILPIT, uniqueEmail, verificationLinkFor } from "./helpers";
 
 const PASSWORD = "e2e-password-1";
 
@@ -55,15 +55,27 @@ test("sign up, verify by email, log in and log out", async ({ page, request }) =
   await expect(page).toHaveURL(/\/login$/);
 });
 
-// §3.7 / §10.3: resend from the login screen; the earlier link stops working
-test("resend from login invalidates the old link", async ({ page, request }) => {
+// §3.7 / §10.3: resend from the login screen; the earlier link stops working.
+// Product owner 2026-11-24 (security review SEC-1): at most one email per address every 60 seconds.
+test("resend from login: 60-second pause, then the old link stops working", async ({ page, request }) => {
+  test.setTimeout(120_000);
   const email = uniqueEmail("resend");
   const r = await request.post("/api/auth/signup", { data: { email, password: PASSWORD } });
   expect(r.status()).toBe(201);
   const oldLink = await verificationLinkFor(request, email, 1);
 
+  // Right after sign-up: same answer, but no second email
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
+  await page.getByRole("button", { name: "Resend email" }).click();
+  await expect(page.getByTestId("resend-status")).toContainText("can be requested once a minute");
+  await page.waitForTimeout(2000);
+  const count = async () =>
+    ((await (await request.get(`${MAILPIT}/api/v1/search`, { params: { query: `to:"${email}"` } })).json()).messages ?? []).length;
+  expect(await count()).toBe(1);
+
+  // After the pause a new email goes out
+  await page.waitForTimeout(60_000);
   await page.getByRole("button", { name: "Resend email" }).click();
   await expect(page.getByTestId("resend-status")).toContainText("new verification email has been sent");
 
