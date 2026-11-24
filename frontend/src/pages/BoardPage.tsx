@@ -10,9 +10,9 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { api, errorMessage } from "../api";
+import { api, ApiError, errorMessage } from "../api";
 import { Notice, takeNotice } from "../notice";
 import { formatRelative, formatUtc } from "../format";
 import { STATE_LABELS, TICKET_STATES, TICKET_TYPES, TicketState, TicketSummary, TicketType, TYPE_LABELS } from "../tickets";
@@ -62,13 +62,18 @@ export default function BoardPage() {
     if (teams && teams.length > 0 && !team) setParams({ team: String(teams[0].id) }, { replace: true });
   }, [teams, team, setParams]);
 
+  // Only the latest request may update the board: a slow answer for a previously selected team
+  // must not overwrite the current team's tickets.
+  const ticketsRequest = useRef(0);
   const loadTickets = useCallback(async (teamId: number) => {
+    const req = ++ticketsRequest.current;
     setTickets(null);
     setTicketsError(null);
     try {
-      setTickets(await api<TicketSummary[]>(`/tickets?team_id=${teamId}`));
+      const list = await api<TicketSummary[]>(`/tickets?team_id=${teamId}`);
+      if (req === ticketsRequest.current) setTickets(list);
     } catch (e) {
-      setTicketsError(errorMessage(e));
+      if (req === ticketsRequest.current) setTicketsError(errorMessage(e));
     }
   }, []);
 
@@ -80,7 +85,13 @@ export default function BoardPage() {
     setTypeFilter("");
     setEpicFilter("");
     setEpics([]);
-    api<Epic[]>(`/epics?team_id=${team.id}`).then(setEpics).catch(() => setEpics([]));
+    let current = true;
+    api<Epic[]>(`/epics?team_id=${team.id}`)
+      .then((list) => current && setEpics(list))
+      .catch(() => current && setEpics([]));
+    return () => {
+      current = false;
+    };
   }, [team?.id, loadTickets]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Type AND epic AND case-insensitive title substring (§8.9)
@@ -134,11 +145,21 @@ export default function BoardPage() {
       const saved = await api<TicketSummary>(`/tickets/${ticket.id}`, { method: "PATCH", body: { state: target } });
       setTickets((list) => (list ?? []).map((t) => (t.id === ticket.id ? { ...t, state: saved.state, modified_at: saved.modified_at } : t)));
     } catch (err) {
-      setTickets((list) => (list ?? []).map((t) => (t.id === ticket.id ? ticket : t)));
-      setNotice({
-        kind: "error",
-        text: `Could not move "${ticket.title}" to ${STATE_LABELS[target]}: ${errorMessage(err)} The card was returned to ${STATE_LABELS[ticket.state]}.`,
-      });
+      if (err instanceof ApiError && err.status === 404) {
+        // Deleted elsewhere (another user or tab): drop the stale card instead of returning it
+        // (product-owner decision 2026-11-24, option B). Other failures roll back as §8.5 requires.
+        setTickets((list) => (list ?? []).filter((t) => t.id !== ticket.id));
+        setNotice({
+          kind: "error",
+          text: `Ticket #${ticket.id} "${ticket.title}" was deleted by someone else and has been removed from the board.`,
+        });
+      } else {
+        setTickets((list) => (list ?? []).map((t) => (t.id === ticket.id ? ticket : t)));
+        setNotice({
+          kind: "error",
+          text: `Could not move "${ticket.title}" to ${STATE_LABELS[target]}: ${errorMessage(err)} The card was returned to ${STATE_LABELS[ticket.state]}.`,
+        });
+      }
     } finally {
       setSaving((s) => {
         const n = new Set(s);

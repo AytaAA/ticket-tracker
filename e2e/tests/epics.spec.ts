@@ -80,3 +80,32 @@ test("epic team cannot be changed through the API", async ({ page }) => {
   expect((await page.request.delete(`/api/teams/${a.id}`)).status()).toBe(204);
   expect((await page.request.delete(`/api/teams/${b.id}`)).status()).toBe(204);
 });
+
+// Regression (found by the suite 2026-11-24): a slow response for the previously selected team
+// must not overwrite the epics of the team selected now.
+test("switching teams quickly shows the selected team's epics", async ({ page }) => {
+  await loginAsNewUser(page, "epicrace");
+  const s = suffix();
+  const a = await (await page.request.post("/api/teams", { data: { name: `Race A ${s}` } })).json();
+  const b = await (await page.request.post("/api/teams", { data: { name: `Race B ${s}` } })).json();
+  const ea = await (await page.request.post("/api/epics", { data: { team_id: a.id, title: "Epic of A" } })).json();
+  const eb = await (await page.request.post("/api/epics", { data: { team_id: b.id, title: "Epic of B" } })).json();
+  try {
+    await page.route(`**/api/epics?team_id=${a.id}`, async (route) => {
+      await new Promise((r) => setTimeout(r, 1500)); // A answers late
+      await route.continue();
+    });
+    await page.goto(`/epics?team=${a.id}`);
+    await page.getByLabel("Team").selectOption(String(b.id));
+    const rows = page.getByTestId("epics-table").locator("tbody tr");
+    await expect(rows).toHaveText([/Epic of B/]);
+    await page.waitForTimeout(2000); // let A's late answer arrive
+    await expect(rows).toHaveText([/Epic of B/]);
+  } finally {
+    await page.unrouteAll();
+    await page.request.delete(`/api/epics/${ea.id}`);
+    await page.request.delete(`/api/epics/${eb.id}`);
+    await page.request.delete(`/api/teams/${a.id}`);
+    await page.request.delete(`/api/teams/${b.id}`);
+  }
+});

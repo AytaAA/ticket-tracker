@@ -38,12 +38,18 @@ export default function TeamsPage() {
     else action();
   }
 
+  // Only the latest list request may update the table. If something is created/renamed/deleted while the
+  // first list is still loading, the list is fetched again, so a late, older answer can't hide the change
+  // (race found by the e2e suite, 2026-11-24).
+  const loadRequest = useRef(0);
   const load = useCallback(async () => {
+    const req = ++loadRequest.current;
     setLoadError(null);
     try {
-      setTeams(await api<Team[]>("/teams"));
+      const list = await api<Team[]>("/teams");
+      if (req === loadRequest.current) setTeams(list);
     } catch (e) {
-      setLoadError(errorMessage(e));
+      if (req === loadRequest.current) setLoadError(errorMessage(e));
     }
   }, []);
 
@@ -57,7 +63,8 @@ export default function TeamsPage() {
 
   function onCreated(team: Team) {
     closeCreate();
-    setTeams((list) => sortByName([...(list ?? []), team]));
+    if (teams === null) load(); // first load still running: fetch again instead of merging
+    else setTeams((list) => sortByName([...(list ?? []), team]));
     setNotice({ kind: "success", text: `Team "${team.name}" created.` });
   }
 

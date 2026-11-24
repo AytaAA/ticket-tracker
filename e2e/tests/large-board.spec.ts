@@ -44,6 +44,8 @@ test("board with 150 tickets loads, filters and drags quickly", async ({ page })
     await expect(page.getByTestId("ticket-count")).toHaveText(`10 of ${COUNT} tickets`); // 140–149
     const filterMs = Date.now() - t1;
     await page.getByRole("button", { name: "Clear", exact: true }).click();
+    // search is applied with useDeferredValue: wait until all cards are back before picking one
+    await expect(page.locator(".ticket-card")).toHaveCount(COUNT);
 
     // Drag still works and persists
     const card = page.getByTestId("column-new").locator(".ticket-card").first();

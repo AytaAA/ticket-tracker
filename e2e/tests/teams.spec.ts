@@ -73,3 +73,33 @@ test("teams API returns 401 without a session", async ({ request }) => {
   const r = await request.get("/api/teams");
   expect(r.status()).toBe(401);
 });
+
+// Regression (found by the suite 2026-11-24): creating a team while the list is still loading
+// must not be hidden by the late, older list response.
+test("team created while the list is loading stays visible", async ({ page }) => {
+  await loginAsNewUser(page, "teamrace");
+  const name = `QA Race ${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
+  let delayed = false;
+  await page.route("**/api/teams", async (route) => {
+    if (route.request().method() === "GET" && !delayed) {
+      delayed = true;
+      const response = await route.fetch(); // snapshot taken BEFORE the team exists
+      await new Promise((r) => setTimeout(r, 1500));
+      await route.fulfill({ response });
+    } else {
+      await route.continue();
+    }
+  });
+  try {
+    await page.goto("/teams");
+    await page.getByRole("button", { name: "+ Create team" }).click();
+    await page.getByRole("dialog").getByLabel("Team name").fill(name);
+    await page.getByRole("dialog").getByRole("button", { name: "Create" }).click();
+    await page.waitForTimeout(2000); // the old list answer arrives now
+    await expect(page.getByRole("cell", { name, exact: true })).toBeVisible();
+  } finally {
+    await page.unrouteAll();
+    const team = (await (await page.request.get("/api/teams")).json()).find((t: { name: string }) => t.name === name);
+    if (team) await page.request.delete(`/api/teams/${team.id}`);
+  }
+});

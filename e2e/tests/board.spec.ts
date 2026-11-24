@@ -104,3 +104,29 @@ test("failed drop rolls the card back and shows an error", async ({ page }) => {
     await cleanup(page, team.id);
   }
 });
+
+// Product-owner decision 2026-11-24 (option B): dropping a card whose ticket was deleted elsewhere removes it
+test("dropping a ticket deleted elsewhere removes its card", async ({ page }) => {
+  const { team, mk } = await setup(page);
+  try {
+    const keep = await mk("Still here", "new");
+    const gone = await mk("Deleted in another tab", "new");
+    await page.goto(`/board?team=${team.id}`);
+    await expect(page.getByTestId("count-new")).toHaveText("2");
+
+    // someone else deletes it after the board was loaded
+    expect((await page.request.delete(`/api/tickets/${gone.id}`)).status()).toBe(204);
+    await dragTo(page, page.getByTestId(`card-${gone.id}`), page.getByTestId("column-done"));
+
+    await expect(page.getByTestId("board-notice")).toHaveText(
+      `Ticket #${gone.id} "Deleted in another tab" was deleted by someone else and has been removed from the board.`,
+    );
+    await expect(page.getByTestId(`card-${gone.id}`)).toHaveCount(0);
+    await expect(page.getByTestId("count-new")).toHaveText("1");
+    await expect(page.getByTestId("count-done")).toHaveText("0");
+    await expect(page.getByTestId("ticket-count")).toHaveText("1 ticket");
+    await expect(page.getByTestId(`card-${keep.id}`)).toBeVisible();
+  } finally {
+    await cleanup(page, team.id);
+  }
+});

@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError, errorMessage } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -66,13 +66,18 @@ export default function EpicsPage() {
     if (teams && teams.length > 0 && !team) setParams({ team: String(teams[0].id) }, { replace: true });
   }, [teams, team, setParams]);
 
+  // Only the latest request may update the list: a slow answer for a previously selected team
+  // must not overwrite the current team's epics (race found by the e2e suite, 2026-11-24).
+  const epicsRequest = useRef(0);
   const loadEpics = useCallback(async (teamId: number) => {
+    const req = ++epicsRequest.current;
     setEpics(null);
     setEpicsError(null);
     try {
-      setEpics(await api<Epic[]>(`/epics?team_id=${teamId}`));
+      const list = await api<Epic[]>(`/epics?team_id=${teamId}`);
+      if (req === epicsRequest.current) setEpics(list);
     } catch (e) {
-      setEpicsError(errorMessage(e));
+      if (req === epicsRequest.current) setEpicsError(errorMessage(e));
     }
   }, []);
 
@@ -88,6 +93,11 @@ export default function EpicsPage() {
 
   function onSaved(epic: Epic, created: boolean) {
     setPanel(null);
+    if (epics === null && team) {
+      loadEpics(team.id); // list still loading: fetch again instead of merging into an empty list
+      setNotice({ kind: "success", text: created ? `Epic "${epic.title}" created.` : `Epic "${epic.title}" saved.` });
+      return;
+    }
     // newest modified first, like the API
     setEpics((list) => [epic, ...(list ?? []).filter((e) => e.id !== epic.id)].sort(byModifiedDesc));
     setNotice({ kind: "success", text: created ? `Epic "${epic.title}" created.` : `Epic "${epic.title}" saved.` });
