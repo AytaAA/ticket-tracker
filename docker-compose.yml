@@ -1,6 +1,7 @@
 # Starts from a clean checkout with just `docker compose up --build` (§2.8): every setting has a local-dev
 # default below. Copy .env.example to .env only to override something (e.g. SMTP for relay1.dataart.com).
 # The defaults are the same local-only placeholders as in .env.example; no real secret is committed (§11.1).
+# Ports: APP_PORT (default 8080) and MAILPIT_PORT (default 8025), reachable only from this computer (127.0.0.1).
 services:
   db:
     image: postgres:16-alpine
@@ -22,6 +23,8 @@ services:
       - path: .env
         required: false # optional: only overrides the defaults
     environment:
+      # Link in the verification email follows the chosen port unless APP_BASE_URL is set explicitly
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:${APP_PORT:-8080}}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tickets}:${POSTGRES_PASSWORD:-change-me-local-only}@db:5432/${POSTGRES_DB:-tickets}
     depends_on:
       db:
@@ -32,7 +35,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "8080:80"
+      - "127.0.0.1:${APP_PORT:-8080}:80"
     depends_on:
       backend:
         condition: service_healthy
@@ -40,7 +43,7 @@ services:
   mailpit:
     image: axllent/mailpit:v1.21
     ports:
-      - "8025:8025"
+      - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
 
 volumes:
   db-data:

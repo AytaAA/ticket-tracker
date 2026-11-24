@@ -21,7 +21,7 @@ Requirements: [`docs/project_requirements.md`](docs/project_requirements.md). De
 - **Docker with Docker Compose v2.24 or newer** (`docker compose version`). On Windows and macOS this is
   Docker Desktop. On Windows you can also use Docker Engine inside WSL 2 and run every command there.
 - **Git**, to clone the repository.
-- Free ports **8080** (app) and **8025** (Mailpit).
+- Free ports **8080** (app) and **8025** (Mailpit), or any other two ports (see [Other ports](#other-ports)).
 
 Nothing else needs to be installed to run the app. Node.js is only needed for the optional browser tests (see [Tests](#tests)).
 
@@ -50,6 +50,22 @@ docker compose up --build -d --wait
 
 **No `.env` file is needed.** Every setting has a local default in `docker-compose.yml`. See
 [Configuration](#configuration) to change one.
+
+Both ports are opened on `127.0.0.1` only: the app and the Mailpit inbox are reachable from this computer,
+not from other machines on the network.
+
+### Other ports
+
+If 8080 or 8025 is already taken, pick other ports when starting — nothing else needs to change
+(the link in the verification email follows `APP_PORT`):
+
+```bash
+APP_PORT=9080 MAILPIT_PORT=9025 docker compose up --build -d --wait
+```
+
+PowerShell: `$env:APP_PORT=9080; $env:MAILPIT_PORT=9025; docker compose up --build -d --wait`.
+To keep them, put `APP_PORT=9080` and `MAILPIT_PORT=9025` in `.env`. Then open http://localhost:9080 and
+http://localhost:9025.
 
 ### Stop, restart, start from scratch
 
@@ -109,7 +125,8 @@ docker compose up --build -d --wait
 | Variable | Default | Meaning |
 |---|---|---|
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | `tickets` / `tickets` / `change-me-local-only` | Database name and credentials (local container only). Changing them on an existing volume needs `docker compose down -v` first. |
-| `APP_BASE_URL` | `http://localhost:8080` | Used to build the link in the verification email |
+| `APP_PORT` / `MAILPIT_PORT` | `8080` / `8025` | Ports on this computer for the app and the Mailpit inbox |
+| `APP_BASE_URL` | `http://localhost:<APP_PORT>` | Used to build the link in the verification email; set it only if the app is reached under another address |
 | `SMTP_HOST` / `SMTP_PORT` | `mailpit` / `1025` | Mail server for verification emails |
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | empty | SMTP login, only if the server needs it |
 | `SMTP_STARTTLS` | `false` | Use STARTTLS |
@@ -171,7 +188,8 @@ npx playwright install chromium
 PW_CHANNEL= npx playwright test            # PowerShell: $env:PW_CHANNEL=""; npx playwright test
 ```
 
-Other URLs: set `BASE_URL` (default `http://localhost:8080`) and `MAILPIT_URL` (default `http://localhost:8025`).
+Other ports: set `BASE_URL` (default `http://localhost:8080`) and `MAILPIT_URL` (default `http://localhost:8025`),
+e.g. `BASE_URL=http://localhost:9080 MAILPIT_URL=http://localhost:9025 npx playwright test`.
 
 QA reports with screenshots are in [`docs/qa/`](docs/qa/).
 
@@ -181,7 +199,7 @@ QA reports with screenshots are in [`docs/qa/`](docs/qa/).
 
 | Symptom | Fix |
 |---|---|
-| `port is already allocated` for 8080 or 8025 | Stop whatever uses the port, or change the left side of `ports:` in `docker-compose.yml` (and `APP_BASE_URL`). |
+| `port is already allocated` for 8080 or 8025 | Start with other ports: `APP_PORT=9080 MAILPIT_PORT=9025 docker compose up --build -d --wait` (see [Other ports](#other-ports)). |
 | No verification email | Check Mailpit at http://localhost:8025 and `docker compose logs backend`. Use **Resend email**. |
 | `env_file` / `required` error from Compose | Your Docker Compose is older than v2.24. Update Docker Desktop / Compose. |
 | Backend not healthy | `docker compose logs backend`. A failing migration shows here. |
