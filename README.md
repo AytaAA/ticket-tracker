@@ -111,6 +111,47 @@ To run it without a prompt, set the password in the `TT_PASSWORD` environment va
 
 ---
 
+## Beyond the requirements
+
+Everything in [`docs/project_requirements.md`](docs/project_requirements.md) is implemented. On top of that, these
+features were added on the product owner's request or after QA and code/security reviews
+(decisions are recorded in [`docs/PLAN.md`](docs/PLAN.md) §7, reviews in [`docs/qa/`](docs/qa/)):
+
+**Editing safety**
+- **Unsaved changes are never lost silently.** Leaving a page with unsaved edits asks *"Leave without saving
+  changes?"* — **Yes** leaves without saving, **No** closes the dialog and keeps your edits. Covers the ticket form,
+  the epic panel, team rename/create, a comment being written or edited; triggered by links, the header menu,
+  **Log out** and the browser's Back button (reload / closing the tab shows the browser's own prompt).
+- **Every delete is confirmed** — tickets (required), and also teams, epics and comments.
+- Saving a ticket without changes says *"No changes to save."* and doesn't touch its modified time.
+
+**Comments**
+- **Edit and delete your own comments** (optional feature from the requirements). Edited comments show
+  *"(edited)"*; other people's comments have no Edit/Delete and the API refuses them (403). Comment activity never
+  changes the ticket's modified time or its place on the board.
+
+**Board**
+- A card whose ticket was **deleted by someone else** disappears from the board with a clear message when you try
+  to move it (other failed moves still return the card to its column).
+- A card can't be dragged again while its previous move is still being saved.
+- **Keyboard:** Tab to a card, **Enter** opens the ticket, **Space** picks it up to move it with the arrow keys.
+- Filter count shows *"X of N tickets"*; cards show relative time (*"2h ago"*), exact UTC time on hover.
+
+**Accounts and security**
+- A password made only of spaces is rejected.
+- **At most one verification email per address per minute** (protects the mail server); the earlier link keeps
+  working, and the answer never reveals whether an email is registered.
+- State-changing API calls are accepted only as JSON from this site (CSRF protection); nginx sends security headers
+  (no framing / clickjacking, no MIME sniffing, no Referer, so the verification link can't leak).
+- App and Mailpit ports are opened on `127.0.0.1` only and can be changed with `APP_PORT` / `MAILPIT_PORT`.
+
+**Tooling**
+- `scripts/bulk_tickets.py` creates 100+ tickets through the API for load testing (no seed data in the app).
+- 180+ backend tests and 25 end-to-end browser tests, including deterministic tests for race conditions found
+  during development (fast team switching, creating while a list is still loading).
+
+---
+
 ## Configuration
 
 Settings come from environment variables. Defaults are in `docker-compose.yml` (database) and
