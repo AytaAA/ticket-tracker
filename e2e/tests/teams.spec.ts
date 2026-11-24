@@ -50,9 +50,9 @@ test("create, rename and delete a team", async ({ page }) => {
   await page.getByRole("button", { name: `Edit ${renamed}` }).click();
   await page.getByRole("textbox", { name: "Team name" }).fill("half-typed name");
   await page.getByRole("link", { name: "Board" }).click();
-  const discard = page.getByRole("alertdialog", { name: "Discard unsaved changes?" });
+  const discard = page.getByRole("alertdialog", { name: "Leave without saving changes?" });
   await expect(discard).toBeVisible();
-  await discard.getByRole("button", { name: "Keep editing" }).click();
+  await discard.getByRole("button", { name: "No", exact: true }).click();
   await expect(page).toHaveURL(/\/teams$/);
   await expect(page.getByRole("textbox", { name: "Team name" })).toHaveValue("half-typed name");
   await page.getByRole("button", { name: "Cancel" }).click(); // explicit Cancel needs no confirmation

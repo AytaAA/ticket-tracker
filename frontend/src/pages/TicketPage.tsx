@@ -37,7 +37,9 @@ export default function TicketPage() {
   const [notFound, setNotFound] = useState(false);
   const [form, setForm] = useState<Form | null>(null);
   const [baseline, setBaseline] = useState<Form | null>(null); // last loaded/saved values
-  const dirty = form !== null && baseline !== null && JSON.stringify(form) !== JSON.stringify(baseline);
+  const [commentsDirty, setCommentsDirty] = useState(false); // unposted comment or unsaved comment edit
+  const dirty =
+    (form !== null && baseline !== null && JSON.stringify(form) !== JSON.stringify(baseline)) || commentsDirty;
   const { allowNavigation, dialog: unsavedDialog } = useUnsavedChanges(dirty);
   const [epics, setEpics] = useState<Epic[] | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
@@ -300,7 +302,7 @@ export default function TicketPage() {
           <FieldError msg={errors.body} />
         </form>
 
-        {ticket && <CommentsPanel ticketId={ticket.id} />}
+        {ticket && <CommentsPanel key={ticket.id} ticketId={ticket.id} onDirtyChange={setCommentsDirty} />}
       </div>
 
       {unsavedDialog}

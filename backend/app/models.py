@@ -112,3 +112,5 @@ class Comment(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    # Set when the author edits the comment (§14 stretch); NULL = never edited
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

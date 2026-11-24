@@ -136,6 +136,8 @@ Base path `/api`. JSON in and out. Error body: `{"code": "team_not_empty", "mess
 | DELETE `/tickets/{id}` | – | 204 (comments deleted too) | 404 |
 | GET `/tickets/{id}/comments` | – | 200 oldest first, with author email | 404 |
 | POST `/tickets/{id}/comments` | body | 201 (ticket `modified_at` unchanged, §7.5) | 404 · 422 empty |
+| PATCH `/tickets/{id}/comments/{cid}` | body | 200, sets `edited_at` (§14 stretch, see §7) | 403 not the author · 404 · 422 empty |
+| DELETE `/tickets/{id}/comments/{cid}` | – | 204 (§14 stretch, see §7) | 403 not the author · 404 |
 
 Drag-and-drop = `PATCH /tickets/{id}` with `{"state": "..."}` (§6.8, §8.4).
 
@@ -180,7 +182,7 @@ Slices 1–6 are the minimum Definition of Done; 7 is required but small.
 ## 5. Deliberately NOT included (reject if proposed later)
 
 Pagination, server-side search, WebSockets/live updates, roles/membership, soft delete, optimistic locking (§9.7),
-custom card ordering (§8.7), comment edit/delete, password reset, activity history, virtualization (§14),
+custom card ordering (§8.7), password reset, activity history, virtualization (§14),
 JWT/refresh tokens, Redis, a separate admin panel.
 
 ---
@@ -197,3 +199,14 @@ JWT/refresh tokens, Redis, a separate admin panel.
 - [x] §9.4: 401/404/409/422 used consistently; §9.6 no tokens in URLs except the verify link
 - [x] §9.8/§9.9: Alembic on start, no seed data
 - [x] Decisions D1–D9 accepted or changed
+
+---
+
+## 7. Changes after approval (product owner, 2026-11-24)
+
+| # | Change | Why / notes |
+|---|---|---|
+| C1 | Password made of whitespace only is rejected (422 "Password cannot consist of spaces only") | §3.3 says "at least 8 characters"; 8 spaces met it literally (QA observation) |
+| C2 | Deleting a team or an epic asks for confirmation, like tickets (§6.7) | Every delete in the UI is now confirmed |
+| C3 | Leaving with unsaved edits asks "Leave without saving changes?" — **Yes**: leave, nothing is saved; **No**: close the dialog, stay with the edits | Ticket form, epic panel, team rename/create, comment draft and comment edit. Links, header menu and browser Back (react-router `useBlocker`, so the app uses a data router); reload/close uses the browser's own prompt. Explicit Cancel/Esc does not ask. |
+| C4 | **§14 stretch accepted:** edit and delete **own** comments. Migration 0007 adds `comments.edited_at`; UI shows "(edited)"; delete is confirmed; other users' comments → 403 and no buttons | §7.6 allows it as a stretch feature. Ticket `modified_at` stays unchanged (§7.5). Removed "comment edit/delete" from §5. |

@@ -46,14 +46,17 @@ export function useUnsavedChanges(dirty: boolean) {
   return { allowNavigation, dialog };
 }
 
-/** Same question for in-page switches that would throw edits away (e.g. opening another epic). */
+/** Product-owner wording 2026-11-24: "Leave without saving changes?" — Yes: leave, changes are lost;
+ *  No: close the dialog and keep editing with the changes still there.
+ *  Also used for in-page switches that would throw edits away (e.g. opening another epic). */
 export function DiscardDialog({ onDiscard, onKeep }: { onDiscard: () => void; onKeep: () => void }) {
   return (
     <ConfirmDialog
-      title="Discard unsaved changes?"
-      message="You have changes that are not saved. If you leave now, they will be lost."
-      confirmLabel="Discard changes"
-      cancelLabel="Keep editing"
+      title="Leave without saving changes?"
+      message="Yes: leave, your changes will not be saved. No: stay and keep editing."
+      confirmLabel="Yes"
+      cancelLabel="No"
+      confirmFirst
       onConfirm={onDiscard}
       onCancel={onKeep}
     />

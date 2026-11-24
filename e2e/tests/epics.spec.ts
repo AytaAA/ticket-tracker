@@ -35,8 +35,8 @@ test("create, edit and delete an epic; team with epics cannot be deleted", async
 
   // Unsaved edits: closing the panel by opening "+ Create epic" asks first; Keep editing keeps the text
   await page.getByRole("button", { name: "+ Create epic" }).click();
-  const discard = page.getByRole("alertdialog", { name: "Discard unsaved changes?" });
-  await discard.getByRole("button", { name: "Keep editing" }).click();
+  const discard = page.getByRole("alertdialog", { name: "Leave without saving changes?" });
+  await discard.getByRole("button", { name: "No", exact: true }).click();
   await expect(page.getByLabel("Title")).toHaveValue("Checkout v2");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByTestId("epics-notice")).toHaveText('Epic "Checkout v2" saved.');

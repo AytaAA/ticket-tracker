@@ -7,6 +7,7 @@ export default function ConfirmDialog({
   message,
   confirmLabel,
   cancelLabel = "Cancel",
+  confirmFirst = false,
   busy,
   onConfirm,
   onCancel,
@@ -15,6 +16,8 @@ export default function ConfirmDialog({
   message: string;
   confirmLabel: string;
   cancelLabel?: string;
+  /** Show the confirm button first (e.g. "Yes" / "No"). Focus still starts on the safe (cancel) button. */
+  confirmFirst?: boolean;
   busy?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -28,18 +31,23 @@ export default function ConfirmDialog({
     return () => document.removeEventListener("keydown", onKey);
   }, [onCancel, busy]);
 
+  const confirmButton = (
+    <button type="button" className="btn btn-danger" onClick={onConfirm} disabled={busy}>
+      {busy ? "Working…" : confirmLabel}
+    </button>
+  );
+
   return (
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && !busy && onCancel()}>
       <div className="card modal confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-msg">
         <h2 id="confirm-title">{title}</h2>
         <p id="confirm-msg">{message}</p>
-        <div className="form-actions">
+        <div className={`form-actions${confirmFirst ? " confirm-first" : ""}`}>
+          {confirmFirst && confirmButton}
           <button ref={cancelRef} type="button" className="btn btn-secondary" onClick={onCancel} disabled={busy}>
             {cancelLabel}
           </button>
-          <button type="button" className="btn btn-danger" onClick={onConfirm} disabled={busy}>
-            {busy ? "Working…" : confirmLabel}
-          </button>
+          {!confirmFirst && confirmButton}
         </div>
       </div>
     </div>

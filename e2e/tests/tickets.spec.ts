@@ -77,20 +77,33 @@ test("create, view, edit and delete a ticket", async ({ page }) => {
     expect(api2.modified_at > api1.modified_at).toBe(true);
     expect(modified).toContain("UTC");
 
-    // Unsaved edits: "← Back" asks first; Keep editing stays, Discard leaves (product-owner decision 2026-11-24)
+    // Product-owner scenario 2026-11-24: open a ticket, add a few lines, click "← Back to <team>".
+    // "Leave without saving changes?" — No: dialog closes, ticket stays open with the changes; Yes: leave, nothing saved.
+    const savedBody = "Steps: open checkout, use an expired card.";
+    const leave = page.getByRole("alertdialog", { name: "Leave without saving changes?" });
     await page.goto(`/board?team=${teamB.id}`);
     await page.getByTestId(`card-${id}`).click(); // in-app history entry for the browser Back check below
-    await expect(page.getByLabel("Title")).toHaveValue("Payment fails (moved)");
-    await page.getByLabel("Title").fill("Unsaved title");
-    await page.getByRole("link", { name: /← Back to/ }).click();
-    const discard = page.getByRole("alertdialog", { name: "Discard unsaved changes?" });
-    await discard.getByRole("button", { name: "Keep editing" }).click();
+    await expect(page.getByLabel("Body")).toHaveValue(savedBody);
+    await page.getByLabel("Body").fill(`${savedBody}\nline one\nline two`);
+
+    await page.getByRole("link", { name: `← Back to ${teamB.name}` }).click();
+    await expect(leave.getByRole("button")).toHaveText(["Yes", "No"]);
+    await leave.getByRole("button", { name: "No", exact: true }).click();
+    await expect(leave).toBeHidden();
     await expect(page).toHaveURL(new RegExp(`/tickets/${id}$`));
-    await expect(page.getByLabel("Title")).toHaveValue("Unsaved title");
-    await page.goBack(); // browser Back is guarded too
-    await expect(discard).toBeVisible();
-    await discard.getByRole("button", { name: "Discard changes" }).click();
-    await expect(page).not.toHaveURL(new RegExp(`/tickets/${id}$`));
+    await expect(page.getByLabel("Body")).toHaveValue(`${savedBody}\nline one\nline two`);
+
+    await page.getByRole("link", { name: `← Back to ${teamB.name}` }).click();
+    await leave.getByRole("button", { name: "Yes", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/board\\?team=${teamB.id}$`));
+    expect((await (await page.request.get(`/api/tickets/${id}`)).json()).body).toBe(savedBody); // nothing was saved
+
+    // Browser Back is guarded too
+    await page.getByTestId(`card-${id}`).click();
+    await page.getByLabel("Title").fill("Unsaved title");
+    await page.goBack();
+    await leave.getByRole("button", { name: "Yes", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/board\\?team=${teamB.id}$`));
     await page.goto(`/tickets/${id}`);
     await expect(page.getByLabel("Title")).toHaveValue("Payment fails (moved)"); // nothing was saved
 
@@ -99,14 +112,14 @@ test("create, view, edit and delete a ticket", async ({ page }) => {
     await expect(page.getByLabel("Title")).toHaveValue("Payment fails (moved)");
 
     // §6.7 delete needs explicit confirmation; Cancel keeps the ticket
-    await page.getByRole("button", { name: "Delete" }).click();
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
     const dialog = page.getByRole("alertdialog");
     await expect(dialog).toContainText(`Delete ticket #${id}?`);
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();
     expect((await page.request.get(`/api/tickets/${id}`)).status()).toBe(200);
 
-    await page.getByRole("button", { name: "Delete" }).click();
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
     await dialog.getByRole("button", { name: "Delete ticket" }).click();
     await expect(page).toHaveURL(new RegExp(`/board\\?team=${teamB.id}$`));
     expect((await page.request.get(`/api/tickets/${id}`)).status()).toBe(404);
