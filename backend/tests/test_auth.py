@@ -248,3 +248,19 @@ def test_signup_still_succeeds_when_smtp_is_down(client, monkeypatch):
     r = signup(client)
     assert r.status_code == 201
     assert r.json()["verification_email_sent"] is False
+
+
+# ---------- §3.3 + product-owner decision 2026-11-24: whitespace-only password ----------
+
+
+@pytest.mark.parametrize("password", [" " * 8, " " * 20, chr(9) * 8, " " + chr(9) + " " + chr(10) + "    "])
+def test_whitespace_only_password_is_422(client, outbox, password):
+    r = signup(client, "spaces@example.com", password)
+    assert r.status_code == 422
+    assert r.json()["field"] == "password"
+    assert r.json()["message"] == "Password cannot consist of spaces only"
+    assert outbox == []
+
+
+def test_password_with_spaces_inside_is_fine(client, outbox):
+    assert signup(client, "spaces@example.com", "  my pass  ").status_code == 201

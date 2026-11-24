@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
 
-// Explicit confirmation before a destructive action (§6.7).
+// Explicit confirmation before a destructive action: deleting (§6.7, and teams/epics per product owner)
+// or discarding unsaved changes.
 export default function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  cancelLabel = "Cancel",
   busy,
   onConfirm,
   onCancel,
@@ -12,6 +14,7 @@ export default function ConfirmDialog({
   title: string;
   message: string;
   confirmLabel: string;
+  cancelLabel?: string;
   busy?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -32,10 +35,10 @@ export default function ConfirmDialog({
         <p id="confirm-msg">{message}</p>
         <div className="form-actions">
           <button ref={cancelRef} type="button" className="btn btn-secondary" onClick={onCancel} disabled={busy}>
-            Cancel
+            {cancelLabel}
           </button>
           <button type="button" className="btn btn-danger" onClick={onConfirm} disabled={busy}>
-            {busy ? "Deleting…" : confirmLabel}
+            {busy ? "Working…" : confirmLabel}
           </button>
         </div>
       </div>

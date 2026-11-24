@@ -77,6 +77,23 @@ test("create, view, edit and delete a ticket", async ({ page }) => {
     expect(api2.modified_at > api1.modified_at).toBe(true);
     expect(modified).toContain("UTC");
 
+    // Unsaved edits: "← Back" asks first; Keep editing stays, Discard leaves (product-owner decision 2026-11-24)
+    await page.goto(`/board?team=${teamB.id}`);
+    await page.getByTestId(`card-${id}`).click(); // in-app history entry for the browser Back check below
+    await expect(page.getByLabel("Title")).toHaveValue("Payment fails (moved)");
+    await page.getByLabel("Title").fill("Unsaved title");
+    await page.getByRole("link", { name: /← Back to/ }).click();
+    const discard = page.getByRole("alertdialog", { name: "Discard unsaved changes?" });
+    await discard.getByRole("button", { name: "Keep editing" }).click();
+    await expect(page).toHaveURL(new RegExp(`/tickets/${id}$`));
+    await expect(page.getByLabel("Title")).toHaveValue("Unsaved title");
+    await page.goBack(); // browser Back is guarded too
+    await expect(discard).toBeVisible();
+    await discard.getByRole("button", { name: "Discard changes" }).click();
+    await expect(page).not.toHaveURL(new RegExp(`/tickets/${id}$`));
+    await page.goto(`/tickets/${id}`);
+    await expect(page.getByLabel("Title")).toHaveValue("Payment fails (moved)"); // nothing was saved
+
     // Survives reload (§11.2)
     await page.reload();
     await expect(page.getByLabel("Title")).toHaveValue("Payment fails (moved)");

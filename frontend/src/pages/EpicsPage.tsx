@@ -1,7 +1,9 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError, errorMessage } from "../api";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { formatUtc } from "../format";
+import { DiscardDialog, useUnsavedChanges } from "../unsaved";
 import type { Team } from "./TeamsPage";
 
 export type Epic = {
@@ -23,7 +25,23 @@ export default function EpicsPage() {
   const [teamsError, setTeamsError] = useState<string | null>(null);
   const [epics, setEpics] = useState<Epic[] | null>(null);
   const [epicsError, setEpicsError] = useState<string | null>(null);
-  const [panel, setPanel] = useState<Panel>(null);
+  const [panel, setPanelState] = useState<Panel>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Epic | null>(null);
+  // Unsaved edits in the side panel (product-owner decision 2026-11-24)
+  const [panelDirty, setPanelDirty] = useState(false);
+  const [pending, setPending] = useState<(() => void) | null>(null);
+  const { dialog: unsavedDialog } = useUnsavedChanges(panelDirty);
+
+  function setPanel(p: Panel) {
+    setPanelState(p);
+    setPanelDirty(false);
+  }
+
+  /** Run an in-page action that would replace the panel; ask first if it has unsaved edits. */
+  function guarded(action: () => void) {
+    if (panelDirty) setPending(() => action);
+    else action();
+  }
   const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -76,6 +94,7 @@ export default function EpicsPage() {
   }
 
   async function onDelete(epic: Epic) {
+    setConfirmDelete(null);
     setNotice(null);
     setDeletingId(epic.id);
     try {
@@ -122,7 +141,10 @@ export default function EpicsPage() {
         <div>
           <h1>Epics</h1>
           <label htmlFor="epics-team">Team</label>
-          <select id="epics-team" className="team-select" value={team?.id ?? ""} onChange={(e) => selectTeam(e.target.value)}>
+          <select id="epics-team" className="team-select" value={team?.id ?? ""} onChange={(e) => {
+              const id = e.target.value;
+              guarded(() => selectTeam(id));
+            }}>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -134,10 +156,12 @@ export default function EpicsPage() {
           type="button"
           className="btn btn-primary"
           disabled={!team}
-          onClick={() => {
-            setNotice(null);
-            setPanel({ kind: "create" });
-          }}
+          onClick={() =>
+            guarded(() => {
+              setNotice(null);
+              setPanel({ kind: "create" });
+            })
+          }
         >
           + Create epic
         </button>
@@ -193,10 +217,12 @@ export default function EpicsPage() {
                             type="button"
                             className="btn btn-secondary btn-small"
                             aria-label={`Edit ${epic.title}`}
-                            onClick={() => {
-                              setNotice(null);
-                              setPanel({ kind: "edit", epic });
-                            }}
+                            onClick={() =>
+                              guarded(() => {
+                                setNotice(null);
+                                setPanel({ kind: "edit", epic });
+                              })
+                            }
                           >
                             Edit
                           </button>
@@ -206,7 +232,12 @@ export default function EpicsPage() {
                             aria-label={`Delete ${epic.title}`}
                             disabled={inUse || deletingId === epic.id}
                             title={inUse ? "Delete is disabled while tickets reference the epic." : undefined}
-                            onClick={() => onDelete(epic)}
+                            onClick={() =>
+                              guarded(() => {
+                                setNotice(null);
+                                setConfirmDelete(epic);
+                              })
+                            }
                           >
                             {deletingId === epic.id ? "Deleting…" : "Delete"}
                           </button>
@@ -229,12 +260,34 @@ export default function EpicsPage() {
               epic={panel.kind === "edit" ? panel.epic : null}
               onSaved={onSaved}
               onCancel={() => setPanel(null)}
+              onDirtyChange={setPanelDirty}
             />
           ) : (
             <p className="muted panel-hint">Choose “Edit” on an epic, or “+ Create epic”.</p>
           )}
         </aside>
       </div>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`Delete epic "${confirmDelete.title}"?`}
+          message="The epic will be deleted permanently. This cannot be undone."
+          confirmLabel="Delete epic"
+          onConfirm={() => onDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+      {pending && (
+        <DiscardDialog
+          onDiscard={() => {
+            const action = pending;
+            setPending(null);
+            action();
+          }}
+          onKeep={() => setPending(null)}
+        />
+      )}
+      {unsavedDialog}
     </section>
   );
 }
@@ -248,14 +301,20 @@ function EpicForm({
   epic,
   onSaved,
   onCancel,
+  onDirtyChange,
 }: {
   team: Team;
   epic: Epic | null;
   onSaved: (e: Epic, created: boolean) => void;
   onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const [title, setTitle] = useState(epic?.title ?? "");
   const [description, setDescription] = useState(epic?.description ?? "");
+  useEffect(
+    () => onDirtyChange(title !== (epic?.title ?? "") || description !== (epic?.description ?? "")),
+    [title, description, epic, onDirtyChange],
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 

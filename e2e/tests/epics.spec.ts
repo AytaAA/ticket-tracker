@@ -32,6 +32,12 @@ test("create, edit and delete an epic; team with epics cannot be deleted", async
   await page.getByRole("button", { name: "Edit Checkout reliability" }).click();
   await expect(page.getByTestId("epic-form-team")).toHaveText(`Team: ${teamName} (cannot be changed)`);
   await page.getByLabel("Title").fill("Checkout v2");
+
+  // Unsaved edits: closing the panel by opening "+ Create epic" asks first; Keep editing keeps the text
+  await page.getByRole("button", { name: "+ Create epic" }).click();
+  const discard = page.getByRole("alertdialog", { name: "Discard unsaved changes?" });
+  await discard.getByRole("button", { name: "Keep editing" }).click();
+  await expect(page.getByLabel("Title")).toHaveValue("Checkout v2");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByTestId("epics-notice")).toHaveText('Epic "Checkout v2" saved.');
   await page.reload();
@@ -49,11 +55,13 @@ test("create, edit and delete an epic; team with epics cannot be deleted", async
   // Delete the epic → the team becomes deletable
   await page.goto(`/epics?team=${team.id}`);
   await page.getByRole("button", { name: "Delete Checkout v2" }).click();
+  await page.getByRole("alertdialog", { name: 'Delete epic "Checkout v2"?' }).getByRole("button", { name: "Delete epic" }).click();
   await expect(page.getByTestId("epics-notice")).toHaveText('Epic "Checkout v2" deleted.');
   await expect(page.getByTestId("epics-empty")).toBeVisible();
   await page.goto("/teams");
   await expect(teamRow.getByRole("button", { name: `Delete ${teamName}` })).toBeEnabled();
   await teamRow.getByRole("button", { name: `Delete ${teamName}` }).click();
+  await page.getByRole("button", { name: "Delete team" }).click();
   await expect(page.getByTestId("teams-notice")).toHaveText(`Team "${teamName}" deleted.`);
 });
 

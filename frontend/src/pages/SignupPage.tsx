@@ -26,6 +26,7 @@ export default function SignupPage() {
     const errs: FieldErrors = {};
     if (!email.trim()) errs.email = "Email is required.";
     if (password.length < MIN_PASSWORD) errs.password = `Password must be at least ${MIN_PASSWORD} characters.`;
+    else if (!password.trim()) errs.password = "Password cannot consist of spaces only.";
     if (confirm !== password) errs.confirm = "Passwords do not match.";
     return errs;
   }

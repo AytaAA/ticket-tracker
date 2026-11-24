@@ -52,6 +52,8 @@ class SignupBody(EmailBody):
     def _password(cls, v: str) -> str:
         if len(v) < MIN_PASSWORD_LENGTH:
             raise ValueError(f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
+        if not v.strip():  # product-owner decision 2026-11-24: "        " is not a password
+            raise ValueError("Password cannot consist of spaces only")
         return v
 
 

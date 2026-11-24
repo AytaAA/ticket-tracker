@@ -103,3 +103,18 @@ test("protected API returns 401 without a session", async ({ request }) => {
   expect(r.status()).toBe(401);
   expect((await r.json()).code).toBe("unauthenticated");
 });
+
+// §3.3 + product-owner decision 2026-11-24: a password of spaces only is refused (UI and API)
+test("password of spaces only is rejected", async ({ page, request }) => {
+  const email = uniqueEmail("spaces");
+  const api = await request.post("/api/auth/signup", { data: { email, password: "        " } });
+  expect(api.status()).toBe(422);
+  expect((await api.json()).message).toBe("Password cannot consist of spaces only");
+
+  await page.goto("/signup");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("        ");
+  await page.getByLabel("Confirm password").fill("        ");
+  await page.getByRole("button", { name: "Sign up" }).click();
+  await expect(page.getByText("Password cannot consist of spaces only.")).toBeVisible();
+});

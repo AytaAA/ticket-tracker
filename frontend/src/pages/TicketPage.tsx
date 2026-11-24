@@ -5,6 +5,7 @@ import { Notice, takeNotice } from "../notice";
 import CommentsPanel from "../components/CommentsPanel";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { formatUtc } from "../format";
+import { useUnsavedChanges } from "../unsaved";
 import { STATE_LABELS, Ticket, TICKET_STATES, TICKET_TYPES, TicketState, TicketType, TYPE_LABELS } from "../tickets";
 import type { Epic } from "./EpicsPage";
 import type { Team } from "./TeamsPage";
@@ -35,6 +36,9 @@ export default function TicketPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [form, setForm] = useState<Form | null>(null);
+  const [baseline, setBaseline] = useState<Form | null>(null); // last loaded/saved values
+  const dirty = form !== null && baseline !== null && JSON.stringify(form) !== JSON.stringify(baseline);
+  const { allowNavigation, dialog: unsavedDialog } = useUnsavedChanges(dirty);
   const [epics, setEpics] = useState<Epic[] | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -52,11 +56,14 @@ export default function TicketPage() {
         const wanted = params.get("team");
         const team = teamList.find((t) => String(t.id) === wanted) ?? teamList[0];
         setTicket(null);
-        setForm({ team_id: team ? String(team.id) : "", type: "", state: "new", epic_id: "", title: "", body: "" });
+        const empty: Form = { team_id: team ? String(team.id) : "", type: "", state: "new", epic_id: "", title: "", body: "" };
+        setForm(empty);
+        setBaseline(empty);
       } else {
         const t = await api<Ticket>(`/tickets/${id}`);
         setTicket(t);
         setForm(formFrom(t));
+        setBaseline(formFrom(t));
       }
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) setNotFound(true);
@@ -126,6 +133,7 @@ export default function TicketPage() {
     try {
       if (isNew) {
         const created = await api<Ticket>("/tickets", { method: "POST", body: payload });
+        allowNavigation();
         navigate(`/tickets/${created.id}`, {
           replace: true,
           state: { notice: { kind: "success", text: `Ticket #${created.id} created.` } },
@@ -135,6 +143,7 @@ export default function TicketPage() {
         const unchanged = saved.modified_at === ticket!.modified_at;
         setTicket(saved);
         setForm(formFrom(saved));
+        setBaseline(formFrom(saved));
         setNotice(unchanged ? { kind: "info", text: "No changes to save." } : { kind: "success", text: "Ticket saved." });
       }
     } catch (err) {
@@ -152,6 +161,7 @@ export default function TicketPage() {
     setDeleting(true);
     try {
       await api(`/tickets/${ticket.id}`, { method: "DELETE" });
+      allowNavigation();
       navigate(`/board?team=${ticket.team_id}`, {
         replace: true,
         state: { notice: { kind: "success", text: `Ticket #${ticket.id} deleted.` } },
@@ -293,6 +303,7 @@ export default function TicketPage() {
         {ticket && <CommentsPanel ticketId={ticket.id} />}
       </div>
 
+      {unsavedDialog}
       {confirmDelete && ticket && (
         <ConfirmDialog
           title={`Delete ticket #${ticket.id}?`}

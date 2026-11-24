@@ -46,8 +46,24 @@ test("create, rename and delete a team", async ({ page }) => {
   await page.reload();
   await expect(page.getByRole("cell", { name: renamed, exact: true })).toBeVisible();
 
-  // Delete (empty team)
+  // Unfinished rename: leaving the page asks first (product-owner decision 2026-11-24)
+  await page.getByRole("button", { name: `Edit ${renamed}` }).click();
+  await page.getByRole("textbox", { name: "Team name" }).fill("half-typed name");
+  await page.getByRole("link", { name: "Board" }).click();
+  const discard = page.getByRole("alertdialog", { name: "Discard unsaved changes?" });
+  await expect(discard).toBeVisible();
+  await discard.getByRole("button", { name: "Keep editing" }).click();
+  await expect(page).toHaveURL(/\/teams$/);
+  await expect(page.getByRole("textbox", { name: "Team name" })).toHaveValue("half-typed name");
+  await page.getByRole("button", { name: "Cancel" }).click(); // explicit Cancel needs no confirmation
+
+  // Delete (empty team) asks for confirmation; Cancel keeps it
   await page.getByRole("button", { name: `Delete ${renamed}` }).click();
+  const confirm = page.getByRole("alertdialog", { name: `Delete team "${renamed}"?` });
+  await confirm.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("cell", { name: renamed, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: `Delete ${renamed}` }).click();
+  await confirm.getByRole("button", { name: "Delete team" }).click();
   await expect(page.getByTestId("teams-notice")).toHaveText(`Team "${renamed}" deleted.`);
   await expect(page.getByRole("cell", { name: renamed, exact: true })).toHaveCount(0);
 });

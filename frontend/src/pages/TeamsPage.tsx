@@ -1,6 +1,8 @@
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, errorMessage } from "../api";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { formatUtc } from "../format";
+import { DiscardDialog, useUnsavedChanges } from "../unsaved";
 
 export type Team = {
   id: number;
@@ -19,7 +21,22 @@ export default function TeamsPage() {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const closeCreate = useCallback(() => setCreating(false), []);
+  const [confirmDelete, setConfirmDelete] = useState<Team | null>(null);
+  // Unsaved input in the rename row or the create dialog (product-owner decision 2026-11-24)
+  const [renameDirty, setRenameDirty] = useState(false);
+  const [createDirty, setCreateDirty] = useState(false);
+  const [pending, setPending] = useState<(() => void) | null>(null);
+  const { dialog: unsavedDialog } = useUnsavedChanges(renameDirty || createDirty);
+  const closeCreate = useCallback(() => {
+    setCreating(false);
+    setCreateDirty(false);
+  }, []);
+
+  /** Run an in-page action that would throw away an unfinished rename; ask first if there is one. */
+  function guarded(action: () => void) {
+    if (renameDirty) setPending(() => action);
+    else action();
+  }
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -39,18 +56,20 @@ export default function TeamsPage() {
   }
 
   function onCreated(team: Team) {
-    setCreating(false);
+    closeCreate();
     setTeams((list) => sortByName([...(list ?? []), team]));
     setNotice({ kind: "success", text: `Team "${team.name}" created.` });
   }
 
   function onRenamed(team: Team) {
     setEditingId(null);
+    setRenameDirty(false);
     setTeams((list) => sortByName((list ?? []).map((t) => (t.id === team.id ? team : t))));
     setNotice({ kind: "success", text: `Team renamed to "${team.name}".` });
   }
 
   async function onDelete(team: Team) {
+    setConfirmDelete(null);
     setNotice(null);
     setDeletingId(team.id);
     try {
@@ -72,7 +91,7 @@ export default function TeamsPage() {
           <h1>Teams</h1>
           <p className="muted">All verified users can view and manage all teams.</p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => { setNotice(null); setCreating(true); }}>
+        <button type="button" className="btn btn-primary" onClick={() => guarded(() => { setNotice(null); setEditingId(null); setRenameDirty(false); setCreating(true); })}>
           + Create team
         </button>
       </div>
@@ -117,7 +136,12 @@ export default function TeamsPage() {
                     <tr key={team.id} data-testid={`team-row-${team.id}`}>
                       <td className="name">
                         {editingId === team.id ? (
-                          <RenameForm team={team} onSaved={onRenamed} onCancel={() => setEditingId(null)} />
+                          <RenameForm
+                            team={team}
+                            onSaved={onRenamed}
+                            onCancel={() => { setEditingId(null); setRenameDirty(false); }}
+                            onDirtyChange={setRenameDirty}
+                          />
                         ) : (
                           team.name
                         )}
@@ -130,7 +154,7 @@ export default function TeamsPage() {
                           <button
                             type="button"
                             className="btn btn-secondary btn-small"
-                            onClick={() => { setNotice(null); setEditingId(team.id); }}
+                            onClick={() => guarded(() => { setNotice(null); setRenameDirty(false); setEditingId(team.id); })}
                             aria-label={`Edit ${team.name}`}
                           >
                             Edit
@@ -141,7 +165,7 @@ export default function TeamsPage() {
                           className="btn btn-secondary btn-small"
                           disabled={inUse || deletingId === team.id}
                           title={inUse ? "Delete is disabled while the team contains tickets or epics." : undefined}
-                          onClick={() => onDelete(team)}
+                          onClick={() => guarded(() => { setNotice(null); setConfirmDelete(team); })}
                           aria-label={`Delete ${team.name}`}
                         >
                           {deletingId === team.id ? "Deleting…" : "Delete"}
@@ -157,13 +181,44 @@ export default function TeamsPage() {
         )}
       </div>
 
-      {creating && <CreateTeamDialog onCreated={onCreated} onClose={closeCreate} />}
+      {creating && <CreateTeamDialog onCreated={onCreated} onClose={closeCreate} onDirtyChange={setCreateDirty} />}
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`Delete team "${confirmDelete.name}"?`}
+          message="The team will be deleted permanently. This cannot be undone."
+          confirmLabel="Delete team"
+          onConfirm={() => onDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+      {pending && (
+        <DiscardDialog
+          onDiscard={() => {
+            const action = pending;
+            setPending(null);
+            action();
+          }}
+          onKeep={() => setPending(null)}
+        />
+      )}
+      {unsavedDialog}
     </section>
   );
 }
 
-function RenameForm({ team, onSaved, onCancel }: { team: Team; onSaved: (t: Team) => void; onCancel: () => void }) {
+function RenameForm({
+  team,
+  onSaved,
+  onCancel,
+  onDirtyChange,
+}: {
+  team: Team;
+  onSaved: (t: Team) => void;
+  onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
   const [name, setName] = useState(team.name);
+  useEffect(() => onDirtyChange(name !== team.name), [name, team.name, onDirtyChange]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -213,8 +268,17 @@ function RenameForm({ team, onSaved, onCancel }: { team: Team; onSaved: (t: Team
   );
 }
 
-function CreateTeamDialog({ onCreated, onClose }: { onCreated: (t: Team) => void; onClose: () => void }) {
+function CreateTeamDialog({
+  onCreated,
+  onClose,
+  onDirtyChange,
+}: {
+  onCreated: (t: Team) => void;
+  onClose: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
   const [name, setName] = useState("");
+  useEffect(() => onDirtyChange(name.trim() !== ""), [name, onDirtyChange]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
