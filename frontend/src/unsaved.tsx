@@ -9,10 +9,24 @@ import ConfirmDialog from "./components/ConfirmDialog";
  *
  * Returns `allowNavigation()`: call it right before navigating on purpose after a save or delete.
  */
+// How many mounted pages currently have unsaved edits; read by the header's Log out (code review 2026-11-24).
+let dirtyPages = 0;
+export function hasUnsavedChanges() {
+  return dirtyPages > 0;
+}
+
 export function useUnsavedChanges(dirty: boolean) {
   const bypass = useRef(false);
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
+
+  useEffect(() => {
+    if (!dirty) return;
+    dirtyPages += 1;
+    return () => {
+      dirtyPages -= 1;
+    };
+  }, [dirty]);
 
   const shouldBlock = useCallback<BlockerFunction>(
     ({ currentLocation, nextLocation }) =>

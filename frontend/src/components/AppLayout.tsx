@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { errorMessage } from "../api";
 import { useAuth } from "../auth";
+import { DiscardDialog, hasUnsavedChanges } from "../unsaved";
 
 // Header for authenticated screens. §15: the collapsed user menu includes "Log out".
 export default function AppLayout() {
@@ -9,6 +10,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,7 +22,15 @@ export default function AppLayout() {
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
 
+  function onLogoutClick() {
+    setOpen(false);
+    // Unsaved edits on the page: ask first, like any other way of leaving (code review 2026-11-24)
+    if (hasUnsavedChanges()) setConfirmLogout(true);
+    else onLogout();
+  }
+
   async function onLogout() {
+    setConfirmLogout(false);
     setError(null);
     try {
       await logout();
@@ -52,7 +62,7 @@ export default function AppLayout() {
           </button>
           {open && (
             <div className="user-menu-list" role="menu">
-              <button type="button" role="menuitem" onClick={onLogout}>
+              <button type="button" role="menuitem" onClick={onLogoutClick}>
                 Log out
               </button>
             </div>
@@ -67,6 +77,7 @@ export default function AppLayout() {
       <main className="app-main">
         <Outlet />
       </main>
+      {confirmLogout && <DiscardDialog onDiscard={onLogout} onKeep={() => setConfirmLogout(false)} />}
     </div>
   );
 }

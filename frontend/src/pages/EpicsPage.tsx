@@ -30,7 +30,7 @@ export default function EpicsPage() {
   // Unsaved edits in the side panel (product-owner decision 2026-11-24)
   const [panelDirty, setPanelDirty] = useState(false);
   const [pending, setPending] = useState<(() => void) | null>(null);
-  const { dialog: unsavedDialog } = useUnsavedChanges(panelDirty);
+  const { allowNavigation, dialog: unsavedDialog } = useUnsavedChanges(panelDirty);
 
   function setPanel(p: Panel) {
     setPanelState(p);
@@ -88,6 +88,7 @@ export default function EpicsPage() {
   function selectTeam(id: string) {
     setPanel(null);
     setNotice(null);
+    allowNavigation(); // already confirmed by guarded(); the dirty flag only clears on the next render
     setParams({ team: id });
   }
 

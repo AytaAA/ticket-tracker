@@ -40,6 +40,8 @@ export default function BoardPage() {
 
   const teamParam = Number(params.get("team"));
   const team = teams?.find((t) => t.id === teamParam) ?? null;
+  const shownTeam = useRef<number | null>(null); // team whose tickets the board shows right now
+  shownTeam.current = team?.id ?? null;
 
   useEffect(() => {
     setNotice(takeNotice(location.state));
@@ -124,7 +126,10 @@ export default function BoardPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), // a plain click still opens the ticket
-    useSensor(KeyboardSensor),
+    // Space picks a card up; Enter keeps opening the ticket (code review 2026-11-24: keyboard users)
+    useSensor(KeyboardSensor, {
+      keyboardCodes: { start: ["Space"], cancel: ["Escape"], end: ["Space", "Enter"] },
+    }),
   );
 
   function onDragStart(e: DragStartEvent) {
@@ -137,24 +142,31 @@ export default function BoardPage() {
     const target = e.over?.id as TicketState | undefined;
     if (!ticket || !target || target === ticket.state) return;
 
+    // Apply a change only to the list it belongs to: while a team's list is reloading (null) or after
+    // the user switched teams, a late answer must not touch the board (code review 2026-11-24).
+    const update = (fn: (list: TicketSummary[]) => TicketSummary[]) =>
+      setTickets((list) => (list && shownTeam.current === ticket.team_id ? fn(list) : list));
+    const stillHere = () => shownTeam.current === ticket.team_id;
+
     // Move the card right away, then persist (§8.4); on failure put it back and say so (§8.5)
     setNotice(null);
-    setTickets((list) => (list ?? []).map((t) => (t.id === ticket.id ? { ...t, state: target } : t)));
+    update((list) => list.map((t) => (t.id === ticket.id ? { ...t, state: target } : t)));
     setSaving((s) => new Set(s).add(ticket.id));
     try {
       const saved = await api<TicketSummary>(`/tickets/${ticket.id}`, { method: "PATCH", body: { state: target } });
-      setTickets((list) => (list ?? []).map((t) => (t.id === ticket.id ? { ...t, state: saved.state, modified_at: saved.modified_at } : t)));
+      update((list) => list.map((t) => (t.id === ticket.id ? { ...t, state: saved.state, modified_at: saved.modified_at } : t)));
     } catch (err) {
+      if (!stillHere()) return;
       if (err instanceof ApiError && err.status === 404) {
         // Deleted elsewhere (another user or tab): drop the stale card instead of returning it
         // (product-owner decision 2026-11-24, option B). Other failures roll back as §8.5 requires.
-        setTickets((list) => (list ?? []).filter((t) => t.id !== ticket.id));
+        update((list) => list.filter((t) => t.id !== ticket.id));
         setNotice({
           kind: "error",
           text: `Ticket #${ticket.id} "${ticket.title}" was deleted by someone else and has been removed from the board.`,
         });
       } else {
-        setTickets((list) => (list ?? []).map((t) => (t.id === ticket.id ? ticket : t)));
+        update((list) => list.map((t) => (t.id === ticket.id ? ticket : t)));
         setNotice({
           kind: "error",
           text: `Could not move "${ticket.title}" to ${STATE_LABELS[target]}: ${errorMessage(err)} The card was returned to ${STATE_LABELS[ticket.state]}.`,
@@ -168,6 +180,7 @@ export default function BoardPage() {
       });
     }
   }
+
 
   if (teamsError) {
     return (
@@ -316,7 +329,8 @@ function Column({ state, tickets, saving }: { state: TicketState; tickets: Ticke
 
 // memo: with 100+ tickets only the moved card re-renders (§8.10)
 const Card = memo(function Card({ ticket, saving }: { ticket: TicketSummary; saving: boolean }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ticket.id });
+  // A card can't be moved again while its previous move is still being saved (code review 2026-11-24)
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: ticket.id, disabled: saving });
   return (
     <Link
       ref={setNodeRef}

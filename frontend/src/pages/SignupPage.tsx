@@ -7,7 +7,7 @@ import { ResendStatus, useResend } from "../components/ResendVerification";
 const MIN_PASSWORD = 8; // §3.3
 
 type FieldErrors = { email?: string; password?: string; confirm?: string; form?: string };
-type SignupResult = { id: number; email: string; verification_email_sent: boolean };
+type SignupResult = { id: number; email: string; verification_email_sent: boolean; verification_link_hours: number };
 
 // §10.1 Sign-up screen (wireframe 2, middle card)
 export default function SignupPage() {
@@ -59,7 +59,7 @@ export default function SignupPage() {
           {done.verification_email_sent ? (
             <p className="alert alert-success" role="status">
               We sent a verification link to <strong>{done.email}</strong>. Open it to activate your account. The link
-              expires in 24 hours.
+              expires in {done.verification_link_hours} hours.
             </p>
           ) : (
             <p className="alert alert-error" role="alert">

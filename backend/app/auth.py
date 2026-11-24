@@ -6,6 +6,7 @@ from datetime import timedelta
 from fastapi import APIRouter, Cookie, Depends, Response
 from pydantic import BaseModel, field_validator
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
 from app.config import settings
@@ -116,11 +117,19 @@ def signup(body: SignupBody, db: DbSession = Depends(get_db)):
         raise ApiError(409, "email_taken", "An account with this email already exists.", "email")
     user = User(email=body.email, password_hash=hash_password(body.password))
     db.add(user)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:  # same email signed up at the same moment (code review 2026-11-24): 409, not 500
+        db.rollback()
+        raise ApiError(409, "email_taken", "An account with this email already exists.", "email")
     token = issue_verification_token(db, user)
     db.commit()
     sent = send_verification_email(user.email, token)
-    return {**user_out(user), "verification_email_sent": sent}
+    return {
+        **user_out(user),
+        "verification_email_sent": sent,
+        "verification_link_hours": settings.verification_token_hours,
+    }
 
 
 @router.post("/verify")
