@@ -147,7 +147,8 @@ features were added on the product owner's request or after QA and code/security
 
 **Tooling**
 - `scripts/bulk_tickets.py` creates 100+ tickets through the API for load testing (no seed data in the app).
-- 180+ backend tests and 25 end-to-end browser tests, including deterministic tests for race conditions found
+- 180+ backend tests and 33 end-to-end browser tests (every confirm and "Leave without saving" dialog, both answers),
+  plus deterministic tests for race conditions found
   during development (fast team switching, creating while a list is still loading).
 
 ---
