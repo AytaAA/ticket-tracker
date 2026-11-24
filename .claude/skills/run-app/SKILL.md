@@ -31,7 +31,6 @@ The script exits non-zero with a `FAIL:` line that tells you which stage broke:
 |---|---|---|
 | 2 | docker not found in WSL | Tell the user; Docker Desktop/engine in WSL must be running |
 | 3 | no `docker-compose.yml` | The walking skeleton (ROADMAP Phase 4) isn't built yet — say so, don't invent one |
-| 4 | no `.env` | Tell the user to run `cp .env.example .env`; never create it with real secrets yourself |
 | 5 | containers unhealthy | Read the printed logs, quote the exact error lines, diagnose |
 | 6 | `/api/health` not answering | Look at backend logs (migrations failing is the usual cause) |
 
