@@ -19,7 +19,7 @@ if ! command -v docker >/dev/null 2>&1; then
   echo "FAIL: docker not found in this WSL distro."; exit 2
 fi
 if [ ! -f docker-compose.yml ] && [ ! -f compose.yaml ]; then
-  echo "FAIL: no docker-compose.yml yet - the walking skeleton (ROADMAP Phase 4) has not been built."; exit 3
+  echo "FAIL: no docker-compose.yml yet - the compose file is missing."; exit 3
 fi
 if [ ! -f .env ]; then
   echo "Note: no .env - using the defaults in docker-compose.yml (cp .env.example .env to override)."

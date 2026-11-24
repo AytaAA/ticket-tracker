@@ -30,7 +30,7 @@ The script exits non-zero with a `FAIL:` line that tells you which stage broke:
 | Exit | Meaning | What to do |
 |---|---|---|
 | 2 | docker not found in WSL | Tell the user; Docker Desktop/engine in WSL must be running |
-| 3 | no `docker-compose.yml` | The walking skeleton (ROADMAP Phase 4) isn't built yet — say so, don't invent one |
+| 3 | no `docker-compose.yml` | The compose file is missing — say so, don't invent one |
 | 5 | containers unhealthy | Read the printed logs, quote the exact error lines, diagnose |
 | 6 | `/api/health` not answering | Look at backend logs (migrations failing is the usual cause) |
 

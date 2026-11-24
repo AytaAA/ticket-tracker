@@ -1,10 +1,10 @@
 # Build Plan — Ticket Tracker
 
-> Status: **APPROVED by product owner, 2026-11-23** (Phase 3 of `docs/ROADMAP.md`). Decisions D1–D9 accepted as proposed.
+> Status: **APPROVED by product owner, 2026-11-23**. Decisions D1–D9 accepted as proposed.
 > Source of truth: `docs/project_requirements.md`. Every item below cites the § it implements. Anything not traceable to project_requirements.md is
 > out of scope (§12, §14).
 
-Stack (from ROADMAP): PostgreSQL 16 · FastAPI + SQLAlchemy + Alembic + argon2-cffi · React + TypeScript + Vite + dnd-kit
+Stack: PostgreSQL 16 · FastAPI + SQLAlchemy + Alembic + argon2-cffi · React + TypeScript + Vite + dnd-kit
 · nginx (serves SPA, proxies `/api`) · Mailpit (dev SMTP) · pytest + Playwright.
 
 ---

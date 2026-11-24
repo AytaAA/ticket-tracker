@@ -9,7 +9,7 @@ Kanban ticket tracker. Built by a manual QA acting as product owner; Claude writ
 - `docs/project_requirements.md` — **source of truth** (requirements, cite as §N.N).
 - `docs/PLAN.md` — approved schema, API (with status codes), screens, slice order; **§7 = changes decided after
   approval**. Follow it; propose changes, don't drift silently, and record every new product-owner decision in §7.
-- `docs/ROADMAP.md` — phase-by-phase process. `docs/wireframes/` — reference UI (not pixel-binding, §15).
+- `docs/wireframes/` — reference UI (not pixel-binding, §15).
 - `README.md` — how to run and test; section "Beyond the requirements" lists everything added on top of the
   requirements. Keep it in sync when adding such a feature.
 
